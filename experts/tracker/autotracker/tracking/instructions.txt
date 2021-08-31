@@ -1,0 +1,9 @@
+
+
+tracking is used
+
+1. conda activate engines
+2. cd tracking
+3. install dependencies:
+    $ python -m pip install "opencv-python>=4.1.2" "opencv-contrib-python>=4.1.2" shapely
+

@@ -1,0 +1,25 @@
+
+
+use engines manager
+
+1. cd nebula/src/engines
+1. instll environments:
+    $ ./setup_envs.sh
+2. activate desired env
+    2.1 for tensorflow models: conda activate tflow
+    2.2 for detectron2 models: conda activate engines
+3. run engine manager
+    3.1. tensorflow models:
+        $ python engine_mgr.py 2> mgr_err.txt  # recommended redirecting error text
+    3.2. detectron models:
+        $ python engine_mgr.py --backend detectron 2> mgr_err.txt  # recommended redirecting error text
+    3.3. additional command line arguments can be found in `parse_args` function of engine_mg.py. Defaults
+         set in `get_detection_model` function.
+4. command line client API
+    4.1. path to movie - start detection and tracking on video file
+        4.1.1. example: /movies/scenecliptest00123.avi
+    4.2. qdetect - print detection queue
+    4.3. qtrack - print waiting tracker tasks
+    4.4. qtrackprog = print tracking tasks in progress
+    4.5. wait - wait for all to tasks to finish and exit
+    4.6. exit - wait for current tasks to finish and exit

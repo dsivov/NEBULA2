@@ -1,0 +1,14 @@
+name: engines
+
+channels:
+  - defaults
+  - anaconda
+  - conda-forge
+
+dependencies:
+  - pyyaml
+  - cudatoolkit
+
+  - autopep8
+  - pip
+  - ipywidgets
