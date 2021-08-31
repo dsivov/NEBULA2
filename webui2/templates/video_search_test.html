@@ -1,0 +1,887 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load search_video_tags %}
+
+{% block extra_classes %}
+	<link rel="stylesheet" type="text/css" href="{% static 'css/video_search_page.css' %}">
+	<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<script>
+	document.page_videos_data = {{ searchresults_json|safe }};
+	document.all_chosen_videos = JSON.parse(localStorage.getItem('chosen_videos')) || [];
+	document.page_chosen_videos_ids = document.all_chosen_videos.reduce(
+        (acc, video_data) => {
+            if (document.page_videos_data.find(el => el.db_id === video_data.db_id)){
+                acc.push(video_data.db_id);
+            }
+            return acc;
+        },
+        []
+    );
+	document.videos_to_hide_next_time = [];
+	document.show_selected = false;
+	document.query_params = {
+		'search': "{{ search }}",
+		'size': {{ size }},
+        'method_search': "{{ method_search }}",
+		'page': {{ current_page }},
+		'sort_by': "{{ sort_by }}",
+		'sort_direction': "{{ sort_direction }}",
+        'similar_algoritm': "{{ SimilarID }}"
+	};
+	document.show_similar = false;
+
+	function submitClosestForm(){
+	    $(this).closest('form').submit();
+    }
+
+    function updateLocalStorageAllChosenVideos(){
+	    localStorage.setItem('chosen_videos', JSON.stringify(document.all_chosen_videos));
+    }
+
+    function saveSimAlgoToLocalStorage(val){
+	    localStorage.setItem('similarityAlgorithm', val);
+    }
+
+    function getSimAlgoFromLocalStorage(){
+	    return localStorage.getItem('similarityAlgorithm');
+    }
+</script>
+<body>
+	<div class="mt-4 d-flex w-100 justify-content-center">
+		<h1>
+			Search for videos
+		</h1>
+	</div>
+	<div class="mt-5 m-2 d-flex justify-content-between">
+		<form action="" method="GET" id="search-form">
+			<div class="d-flex justify-content-between">
+				<div class="d-flex">
+					<div class="video-search-search-input">
+						{{ form.search }}
+					</div>
+					<button
+                        class="btn btn-dark video-search-search-btn"
+                        style="height: 40px;font-size: 0.9rem;"
+                        type="submit"
+                    >Search</button>
+				</div>
+                <div class="d-flex ms-3 align-items-center">
+                    <div class="video-search-search-input">
+                        {{ form.search_method }}
+                    </div>
+                </div>
+                <div class="d-flex ms-3 align-items-center" style="height: 40px;">
+                    <div class="d-flex">
+                        <div
+                            class="font-weight-bold d-flex align-items-center"
+                            style="font-weight: bold; font-size: 0.9rem;"
+                        >Rows:</div>
+                        <div class="video-search-rows-input d-flex align-items-center ms-1">{{ form.size }}</div>
+                    </div>
+                    {% if is_paginated %}
+                        <div class="ms-3 d-flex">
+                            <div
+                                class="font-weight-bold d-flex align-items-center"
+                                style="font-weight: bold; font-size: 0.9rem;"
+                            >Page</div>
+                            {{ form.page }}
+                            <div
+                                class="d-flex align-items-center"
+                                style="white-space: nowrap; font-size: 0.9rem;"
+                            >of {{ number_of_pages }}</div>
+                        </div>
+                    {% endif %}
+                    <div class="ms-2">
+                        <button id='search-form-submit-btn' type="submit" class="btn btn-dark" style="width: 60px;font-size: 0.9rem;">Go</button>
+                    </div>
+                </div>
+
+                {{ form.sort_by }}
+                {{ form.sort_direction }}
+                {{ form.method_search }}
+                {{ form.SimilarID }}
+
+                <div class="mx-3 d-flex align-items-center">
+                    <label
+                        class="text-end ms-2 d-flex align-items-center"
+                        for="similarity-algo-select"
+                        style="white-space: nowrap; font-size: 0.9rem;"
+                    >Similarity Algorithm</label>
+                    <div class="ms-2">
+                        {{ form.similarity_algo }}
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <div class="d-flex justify-content-between" style="gap: 5px;">
+            <div>
+                <input
+                    type="button"
+                    class="btn btn-dark"
+                    style="font-size: 0.9rem;"
+                    id="show-selected-all-btn"
+                    onclick="toggleShowSelectedClick()"
+                    value="Selected"
+                >
+            </div>
+            <div>
+                <input
+                    type="button"
+                    class="btn btn-dark"
+                    style="font-size: 0.9rem;"
+                    id="chosen-video-clear-btn"
+                    onclick="clearAllSelectedVideos()"
+                    value="Clear All"
+                    disabled="disabled"
+                >
+            </div>
+            <div>
+                <form action="{% url 'export-videos-csv' %}" method="POST" target="_blank">
+                    {% csrf_token %}
+                    <input
+                        type="submit"
+                        id="export-csv-btn"
+                        class="btn btn-dark"
+                        style="font-size: 0.9rem;"
+                        value="Export CSV"
+                        disabled="disabled"
+                    >
+                    <input
+                        id="export-selected-videos-input"
+                        type="hidden"
+                        name="selected_videos"
+                        value=""
+                    >
+                </form>
+            </div>
+            <div>
+                <form action="{% url 'export-graph-db-gml' %}" method="POST" target="_blank">
+                    {% csrf_token %}
+                    <input
+                        type="submit"
+                        id="export-graphdb-selected"
+                        class="btn btn-dark"
+                        style="font-size: 0.9rem;"
+                        value="Export GML"
+                        disabled="disabled"
+                    >
+                    <input
+                        id="export-selected-videos-input-2"
+                        type="hidden"
+                        name="selected_videos"
+                        value=""
+                    >
+                </form>
+            </div>
+        </div>
+            <!--<div class="m-1 ms-5">
+            <input
+                type="button"
+                class="btn btn-dark"
+                id="show-similar-btn"
+                value="Show Similar"
+                disabled="disabled"
+                onclick="showSimilar()"
+            >
+        </div>-->
+	</div>
+
+	<table class="table mt-3" id="searchtable">
+		<thead class="thead-light">
+			<tr>
+				<th scope="col">
+					<input
+						class="choose-video-checkbox form-check-input"
+						type="checkbox"
+						onclick="chooseAllVideos()"
+						id="checkbox-all"
+						disabled="disabled"
+					>
+				</th>
+                <th scope="col">
+                    Match
+                </th>
+				<th scope="col" class="name-column">
+					Name
+				</th>
+                <th scope="col">
+                    Metadata
+                </th>
+                <th scope="col">
+                    Section
+                </th>
+                <th scope="col" class="slice-name-column">
+                    Filename
+                </th>
+				<!--<th scope="col" class="header-column-sortable" onclick="sortBy('timestamp')">
+					Timestamp
+					<i
+						id="header-column-sortable-icon-timestamp"
+						class="fa fa-fw fa-sort {%ifequal sort_by 'timestamp'%}{%ifequal sort_direction 'asc'%}fa-sort-up{%else%}fa-sort-down{%endifequal%}{%endifequal%}"
+					></i>
+				</th>
+				-->
+				<th scope="col">
+					Graph ID
+				</th>
+				<th scope="col" class="tags-column">
+					Features
+				</th>
+				<th scope="col" class="pl-3">
+					Video
+				</th>
+			</tr>
+		</thead>
+		<tbody id="searchtable-body">
+			{% for video in searchresults %}
+			<tr id="video-{{ video.db_id }}" class="{% if similar_id and video.db_id == similar_id %}similar-video-main{% endif %}">
+				<th scope="row">
+					<input
+						type="checkbox"
+						class="choose-video-checkbox form-check-input"
+						onclick="chooseVideo('{{ video.db_id }}')"
+						id="checkbox-{{ video.db_id }}"
+					>
+				</th>
+                <td>{% if not similar_id or video.db_id != similar_id %}{{ video.match }}{% endif %}</td>
+				<td class=" tags-column little_font_column ">
+                    <div class="video-db-id">{{ video.name }}</div>
+                    <div class="d-flex flex-wrap m-1">
+                        <a
+                            class="btn btn-dark m-1 little_font_column"
+                            href="{% url 'video-detail-page' %}?id={{ video.db_id }}&position=0"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >Show</a>
+                        <button
+                            type="button"
+                            class="{% if similar_id and video.db_id == similar_id %}disabled{% endif %} btn btn-dark m-1 little_font_column"
+                            id="show-similar-video-btn-{{ video.db_id }}"
+                            onclick="showSimilarVideo('{{ video.db_id }}')"
+                        >Show Similar</button>
+                    </div>
+                </td>
+                <td class="little_font_column">{{ video.metadata }}</td>
+                <td class="little_font_column">{{ video.slice_interval }}</td>
+                <td class="slice-name-column little_font_column">{{ video.slice_name }}</td>
+				<!--<td>{{ video.timestamp }}</td>-->
+				<td class="little_font_column">
+                    <div class="video-db-id">{{ video.db_id }}</div>
+                    <div class="d-flex flex-wrap m-1">
+						<a
+                            href="{% url 'export-graph-db-png' %}?db_id={{ video.db_id }}"
+							class="btn btn-dark m-1 little_font_column"
+                            target="_blank"
+                        >
+                            SVG
+                        </a>
+                        <a
+                            href="{% url 'export-graph-db-json' %}?db_id={{ video.db_id }}"
+							class="btn btn-dark m-1 little_font_column"
+                            target="_blank"
+                        >
+                            JSON
+                        </a>
+                    </div>
+                </td>
+				<td class="tags-column little_font_column">
+					<div
+						id="video-tags-text-{{ video.db_id }}"
+                        class="vpm-video-tags overflow-auto"
+					>
+						{% if video.main_tags %}{{ video.main_tags }}{% else %}-{%endif%}
+					</div>
+					<div class="d-flex flex-wrap m-1">
+						<button
+                            type="button"
+							class="btn btn-dark m-1 little_font_column"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#TagsModal{{ forloop.counter }}"
+                            aria-expanded="false"
+                            aria-controls="TagsModal{{ forloop.counter }}"
+                        >Open All</button>
+                        <div class="collapse tags-collapsible-window" id="TagsModal{{ forloop.counter }}">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <p
+                                        class="modal-title"
+                                        id="TagsModalTitle{{ forloop.counter }}"
+                                        style="font-size: 0.9rem; font-weight: bold"
+                                    >
+                                        {{ video.db_id }} - Tags and Graph Story
+                                    </p>
+                                    <button
+                                        type="button"
+                                        class="btn-close little_font_column"
+                                        data-bs-toggle="collapse"
+                                        data-bs-target="#TagsModal{{ forloop.counter }}"
+                                        aria-label="Close"
+                                    ></button>
+                                </div>
+                                <div class="modal-body tags-collapsible-window-body" id="TagsModalBody{{ forloop.counter }}">
+                                    <div class="row">
+                                        <div class="col-4">
+                                            <p style="font-size: 0.9rem; font-weight: bold">Tags List</p>
+                                            <ul>
+                                                {% for tag in video.tags %}
+                                                    <li>{{ tag }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                        </div>
+                                        <div class="col-8">
+                                            <p style="font-size: 0.9rem; font-weight: bold">Graph Story</p>
+                                            <p>{{ video.graph_history }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+						<form action="{% url 'video-search-annotate' %}?id={{ video.db_id }}" method="POST" target="_blank" rel="noopener noreferrer">
+							{% csrf_token %}
+
+							<input type="hidden" name="video_url" value='{{ video.url }}'/>
+							<input type="hidden" name="db_id" value='{{ video.db_id }}'/>
+							<input type="submit" class="btn btn-dark m-1 little_font_column" value="Annotate"/>
+
+						</form>
+					</div>
+				</td>
+				<td>
+					<video class="rounded" width='300' controls>
+						<source src='{{ video.url }}' type='video/mp4'>
+						Your browser does not support the video tag.
+					</video>
+				</td>
+			</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+
+    <table class="table mt-3 table-hidden" id="similartable">
+		<thead class="thead-light">
+			<tr>
+				<th scope="col" class="name-column">
+					Name
+				</th>
+                <th scope="col">
+                    Distance
+                </th>
+                <th scope="col">
+                    Slice section
+                </th>
+                <th scope="col" class="slice-name-column">
+                    Slice filename
+                </th>
+				<th scope="col">
+					Graph DB
+				</th>
+                <th scope="col">
+                    Annotate
+                </th>
+				<th scope="col" class="pl-3">
+					Video
+				</th>
+			</tr>
+		</thead>
+		<tbody id="similartable-body">
+        </tbody>
+    </table>
+
+    <div class="modal fade" id="loadSpinnerModal" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-loader" role="document">
+            <div class="spinner-border" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function checkChosenVideosAtStartup(){
+        document.all_chosen_videos.forEach(
+            video_data => document.getElementById(`checkbox-${video_data.db_id}`).checked = true
+        )
+    }
+
+    function buildVideoRowFromData(video_data){
+        const video_row = document.createElement('tr');
+        video_row.id = `video-${video_data.db_id}`;
+        video_row.innerHTML = `
+            <th scope="row">
+                <input
+                    type="checkbox"
+                    class="choose-video-checkbox"
+                    onclick="chooseVideo('${video_data.db_id}')"
+                    id="checkbox-${video_data.db_id}"
+                >
+            </th>
+            <td class="name-column">${video_data.name}</td>
+            <td>${video_data.slice_interval}</td>
+            <td class="slice-name-column">${video_data.slice_name}</td>
+            <!--<td>${video_data.timestamp}</td>-->
+            <td>
+                <div class="video-db-id">${video_data.db_id}</div>
+                <div class="d-flex flex-wrap m-1">
+                    <a
+                        href="{% url 'export-graph-db-png' %}?db_id=${video_data.db_id}"
+                        class="btn btn-dark m-1"
+                        target="_blank"
+                    >
+                        SVG
+                    </a>
+                    <a
+                        href="{% url 'export-graph-db-json' %}?db_id=${video_data.db_id}"
+                        class="btn btn-dark m-1"
+                        target="_blank"
+                    >
+                        JSON
+                    </a>
+                </div>
+            </td>
+            <td class="tags-column">
+                <div
+                    id="video-tags-text-${video_data.db_id}"
+                    class="vpm-video-tags overflow-auto"
+                >
+                    ${video_data.main_tags ? video_data.main_tags : '-'}
+                </div>
+                <div class="d-flex flex-wrap m-1">
+                    <input
+                        type="button"
+                        id="video-tags-btn-${video_data.db_id}"
+                        class="btn btn-dark m-1"
+                        value="Open All"
+                        onclick="showAllVideoTags('${video_data.db_id}', '${video_data.tags}')"
+                    >
+                    <form action="annotate" method="POST">
+                        {% csrf_token %}
+
+                        <input type="hidden" name="video_url" value='${video_data.url}'/>
+                        <input type="hidden" name="db_id" value='${video_data.db_id}'/>
+                        <input type="submit" class="btn btn-dark m-1" value="Annotate"/>
+
+                    </form>
+                </div>
+            </td>
+            <td>
+                <video class="rounded" width='300' controls>
+                    <source src='${video_data.url}' type='video/mp4'>
+                    Your browser does not support the video tag.
+                </video>
+            </td>
+        `;
+        return video_row;
+    }
+
+    function addHiddenChosenVideosFromOtherPages(){
+        const tableBody = document.getElementById('searchtable-body');
+        document.all_chosen_videos.forEach(
+            video_data =>{
+                if (document.page_chosen_videos_ids.find(id => id === video_data.db_id)){
+                    // Do not add videos from current page second time
+                    return;
+                }
+                const hidden_row = buildVideoRowFromData(video_data);
+                hidden_row.classList.add('video-row-hidden');
+                tableBody.appendChild(hidden_row);
+            }
+        );
+    }
+
+    function startUp(){
+        const simAlgoSaved = getSimAlgoFromLocalStorage();
+        if (simAlgoSaved){
+            $("#search-form-similarity-algo").val(simAlgoSaved);
+        } else {
+            saveSimAlgoToLocalStorage($("#search-form-similarity-algo").val());
+        }
+        if (document.page_videos_data && document.page_videos_data.length){
+            document.getElementById('checkbox-all').disabled = false;
+        }
+        addHiddenChosenVideosFromOtherPages()
+        checkChosenVideosAtStartup();
+        toggleBtnsAvailabilityBasedOnChosenVideos();
+    }
+
+
+	function getChosenVideosData(){
+	    return document.page_videos_data.reduce(
+	        function(r, video_data){
+	            if (document.page_chosen_videos_ids.indexOf(video_data.db_id) !== -1){
+	                r.push(video_data);
+	            }
+                return r;
+	        },
+	        []
+	    )
+	}
+
+	function disableElements(elements){
+	    elements.forEach(element => {if(element){element.disabled=true;}});
+	}
+	function enableElements(elements){
+	    elements.forEach(element => {if(element){element.disabled=false;}});
+	}
+
+	function toggleBtnsAvailabilityBasedOnChosenVideos(){
+	    const clearAllBtnEl = document.getElementById('chosen-video-clear-btn');
+	    const exportCSVInputEl = document.getElementById('export-selected-videos-input');
+	    const exportCSVBtnEl = document.getElementById('export-csv-btn');
+	    const exportGraphInputEl = document.getElementById('export-selected-videos-input-2');
+	    const exportGraphBtnEl = document.getElementById('export-graphdb-selected')
+	    const showSimilarBtnEl = document.getElementById('show-similar-btn');
+	    const compareSelectedBtnEl = document.getElementById('compare-selected-btn');
+	    const showSelectedBtnEl = document.getElementById('show-selected-all-btn');
+
+	    enableElements([showSelectedBtnEl]);
+
+        if (document.page_chosen_videos_ids.length === 1){
+            enableElements([showSimilarBtnEl]);
+        } else {
+	        disableElements([showSimilarBtnEl]);
+        }
+
+	    if (document.all_chosen_videos.length){
+	        clearAllBtnEl.value = `Clear All (${document.all_chosen_videos.length})`;
+	        const chosen_videos_stringified = JSON.stringify(document.all_chosen_videos);
+	        exportCSVInputEl.value = chosen_videos_stringified;
+	        exportGraphInputEl.value = chosen_videos_stringified;
+	        enableElements([clearAllBtnEl, exportCSVBtnEl, exportGraphBtnEl, compareSelectedBtnEl]);
+	    } else {
+            clearAllBtnEl.value = "Clear All";
+	        exportCSVInputEl.value = "";
+	        exportGraphInputEl.value = "";
+	        disableElements([clearAllBtnEl, exportCSVBtnEl, exportGraphBtnEl, compareSelectedBtnEl]);
+	    }
+	
+	    if (document.show_similar){
+            disableElements([clearAllBtnEl, exportCSVBtnEl, exportGraphBtnEl, compareSelectedBtnEl, showSelectedBtnEl]);
+        }
+	}
+
+	function hideVideo(db_id){
+		const el = document.getElementById(`video-${db_id}`);
+		if (!el) return;
+		el.classList.add('video-row-hidden');
+	}
+
+	function showVideo(db_id){
+		const el = document.getElementById(`video-${db_id}`);
+		if (!el) return;
+		el.classList.remove('video-row-hidden');
+	}
+
+    function focusVideo(db_id){
+        const el = document.getElementById(`video-${db_id}`);
+        if (!el) return;
+        el.classList.add('video-row-focused');
+    }
+
+    function unfocusVideo(db_id){
+        const el = document.getElementById(`video-${db_id}`);
+        if (!el) return;
+        el.classList.remove('video-row-focused');
+    }
+
+	function toggleCheckboxesAvailability(enabled){
+		document.getElementById('checkbox-all').disabled = !enabled;
+	}
+
+	function chooseVideo(db_id){
+		const checkboxRelated = document.getElementById(`checkbox-${db_id}`);
+		const pos_id = document.page_chosen_videos_ids.indexOf(db_id);
+		if (pos_id !== -1){
+			document.page_chosen_videos_ids.splice(pos_id, 1);
+			const pos_id_all = document.all_chosen_videos.findIndex(
+			    el => el.db_id === db_id
+            )
+			document.all_chosen_videos.splice(pos_id_all, 1)
+			checkboxRelated.checked = false;
+		} else {
+			document.page_chosen_videos_ids.push(db_id);
+			document.all_chosen_videos.push(
+			    document.page_videos_data.find(
+			        el => el.db_id === db_id
+                )
+            )
+			checkboxRelated.checked = true;
+		}
+
+		updateLocalStorageAllChosenVideos();
+
+		const general_video_checkbox = document.getElementById(`checkbox-all`);
+		general_video_checkbox.checked = document.page_chosen_videos_ids.length === document.page_videos_data.length;
+
+		toggleBtnsAvailabilityBasedOnChosenVideos();
+	}
+
+	function chooseAllVideos(){
+		const is_everything_chosen_before = (document.page_chosen_videos_ids.length === document.page_videos_data.length);
+
+		if (!is_everything_chosen_before){
+		    // Add the rest from page to all_chosen_videos
+            document.page_videos_data.forEach(
+                video_data => {
+                    if (!document.page_chosen_videos_ids.find(id => id === video_data.db_id)){
+                        document.all_chosen_videos.push(video_data);
+                    }
+                }
+            )
+            // Refill page_chosen_videos_ids
+			document.page_chosen_videos_ids = document.page_videos_data.reduce(
+				function(cumulative, current){
+					cumulative.push(current.db_id);
+					return cumulative;
+				},
+				[]
+			);
+			$('.choose-video-checkbox').prop("checked", true);
+		} else {
+		    // Remove current page videos from all_chosen_videos
+		    document.all_chosen_videos = document.all_chosen_videos.filter(
+		        el => !document.page_chosen_videos_ids.find(id => id === el.db_id)
+            )
+            // Clear page_chosen_videos_ids
+		    document.page_chosen_videos_ids = [];
+		    $('.choose-video-checkbox').prop("checked", false);
+        }
+
+        updateLocalStorageAllChosenVideos();
+		toggleBtnsAvailabilityBasedOnChosenVideos();
+	}
+
+	function clearAllSelectedVideos(){
+        document.videos_to_hide_next_time = document.all_chosen_videos;
+	    document.all_chosen_videos = [];
+        document.page_chosen_videos_ids = [];
+        $('.choose-video-checkbox').prop("checked", false);
+
+        updateLocalStorageAllChosenVideos();
+        toggleBtnsAvailabilityBasedOnChosenVideos();
+
+        //if (document.show_selected){
+        //    showSelectedVideo();
+        //}
+	}
+
+	function sortBy(name){
+		const form = document.getElementById('search-form');
+		const sortByFormElement = document.getElementById('search-form-sort-by');
+		const sortDirectionFormElement = document.getElementById('search-form-sort-direction');
+
+		const initial_sort_direction = sortDirectionFormElement.value;
+		const initial_sort_by = sortByFormElement.value;
+		const sort_by = name;
+		const sort_direction = (sort_by !== initial_sort_by) ? 'asc' : (initial_sort_direction === 'asc') ? 'desc' : 'asc';
+
+		sortByFormElement.value = sort_by;
+		sortDirectionFormElement.value = sort_direction;
+
+		{% if is_paginated %}
+		const currentPageElement = document.getElementById('search-form-page-input');
+		currentPageElement.value = 1;
+		{% endif %}
+
+		form.submit();
+	}
+
+	function showSelectedVideo(pageOnly=false){
+		document.page_videos_data.forEach(video_data => hideVideo(video_data.db_id));
+		if (pageOnly){
+		    document.page_chosen_videos_ids.forEach(videoId => showVideo(videoId));
+        } else {
+		    document.all_chosen_videos.forEach(video_data => showVideo(video_data.db_id));
+        }
+	}
+
+	function showAllVideo(){
+	    document.all_chosen_videos.forEach(video_data => hideVideo(video_data.db_id));
+	    document.page_videos_data.forEach(video_data => showVideo(video_data.db_id));
+	    if (document.videos_to_hide_next_time.length){
+	        document.videos_to_hide_next_time.forEach(
+	            video_data => {
+                    if (!document.all_chosen_videos.find(el => el.db_id === video_data.db_id)){
+                        hideVideo(video_data.db_id)
+                    }
+                }
+            );
+	        document.videos_to_hide_next_time = [];
+        }
+	}
+
+	// TODO
+	function toggleShowSelectedClick(){
+		const showSelectedBtn = document.getElementById('show-selected-all-btn');
+		if (document.show_selected === false){
+			toggleCheckboxesAvailability(false);
+			showSelectedVideo();
+			showSelectedBtn.value = 'Show All';
+		} else {
+			showAllVideo();
+			toggleCheckboxesAvailability(true);
+			showSelectedBtn.value = 'Selected';
+		}
+		document.show_selected = !document.show_selected;
+	}
+
+	function onChangePageSize(){
+	    {% if is_paginated %}
+		$('#search-form-page-input').val(1);
+		{% endif %}
+
+        $('#search-form-submit-btn').click();
+    }
+
+    function buildSimilarVideoRowFromData(video_data, rowClass, showDistance=true){
+        const video_row = document.createElement('tr');
+        video_row.classList.add(rowClass);
+        video_row.id = `video-${video_data.db_id}`;
+        video_row.innerHTML = `
+            <td class="name-column">${video_data.name}</td>
+            <td>${showDistance ? video_data.distance : ''}</td>
+            <td>${video_data.slice_interval}</td>
+            <td class="slice-name-column">${video_data.slice_name}</td>
+            <td>
+                <div class="video-db-id">${video_data.db_id}</div>
+                <div class="d-flex flex-wrap m-1">
+                    <a
+                        href="{% url 'export-graph-db-png' %}?db_id=${video_data.db_id}"
+                        class="btn btn-dark m-1"
+                        target="_blank"
+                    >
+                        SVG
+                    </a>
+                    <a
+                        href="{% url 'export-graph-db-json' %}?db_id=${video_data.db_id}"
+                        class="btn btn-dark m-1"
+                        target="_blank"
+                    >
+                        JSON
+                    </a>
+                </div>
+            </td>
+            <td>
+                <form action="annotate" method="POST">
+                    {% csrf_token %}
+
+                    <input type="hidden" name="video_url" value='${video_data.url}'/>
+                    <input type="hidden" name="db_id" value='${video_data.db_id}'/>
+                    <input type="submit" class="btn btn-dark m-1" value="Annotate"/>
+
+                </form>
+            </td>
+            <td>
+                <video class="rounded" width='300' controls>
+                    <source src='${video_data.url}' type='video/mp4'>
+                    Your browser does not support the video tag.
+                </video>
+            </td>
+        `;
+        return video_row;
+    }
+
+    function fetchSimilarVideosData(videoId, successFunction){
+	    return $.get(`{% url 'fetch-similar-videos' %}?id=${videoId}`, successFunction);
+    }
+
+    function showSimilarVideo(videoId){
+        $('#similar-id-input').val(videoId);
+
+        // Reset search options to defaults
+        $('#search-form-search-input').val('');
+        $('#search-form-search-method-input').val('');
+        $('#search-form-page-input').val(1);
+        $('#search-form-size-input').val(10);
+
+        $('#search-form-submit-btn').click();
+    }
+
+    /*
+    function showSimilar(){
+        const chosenVideoId = document.page_chosen_videos_ids[0];
+        const showSimilarBtnEl = document.getElementById('show-similar-btn');
+        const similarsTableBody = document.getElementById('similartable-body');
+        const similarsTable = document.getElementById('similartable');
+        const mainTable = document.getElementById('searchtable');
+
+        if (document.show_similar){
+            showSimilarBtnEl.value = 'Show Similar';
+            showSimilarBtnEl.classList.remove('similar-video-similar');
+            similarsTableBody.innerHTML = '';
+            mainTable.classList.remove('table-hidden');
+            similarsTable.classList.add('table-hidden');
+            document.show_similar = false;
+            toggleBtnsAvailabilityBasedOnChosenVideos();
+        } else {
+            $("#loadSpinnerModal").modal('show');
+            fetchSimilarVideosData(
+                chosenVideoId,
+                function(similarVideosData){
+                    mainTable.classList.add('table-hidden');
+                    similarsTable.classList.remove('table-hidden');
+
+                    let mainVideoData = similarVideosData.find(el => el.db_id === chosenVideoId);
+                    if (!mainVideoData){
+                        mainVideoData = document.page_videos_data.find(el => el.db_id === chosenVideoId);
+                    }
+                    const mainVideoEl = buildSimilarVideoRowFromData(mainVideoData, 'similar-video-main', false);
+                    similarsTableBody.append(mainVideoEl);
+
+                    similarVideosData.forEach(
+                        function(videoData){
+                            if (videoData['db_id'] === chosenVideoId) return;
+                            const el = buildSimilarVideoRowFromData(videoData, 'similar-video-similar');
+                            similarsTableBody.append(el);
+                        }
+                    );
+
+                    showSimilarBtnEl.value = 'Hide Similar';
+                    showSimilarBtnEl.classList.add('similar-video-similar');
+                    document.show_similar = true;
+                    toggleBtnsAvailabilityBasedOnChosenVideos();
+                    setTimeout(() => $("#loadSpinnerModal").modal('hide'), 500)
+                }
+            );
+        }
+    }
+    */
+
+	$("#search-form").submit(function(){
+	    $("#loadSpinnerModal").modal('show');
+	    $(".modal-backdrop").css("background-color", "#ffffff");
+
+        if ($('#search-form-search-input').val()){
+            // Make similar id null if search is not null
+            $('#similar-id-input').val('');
+            $("#search-form-similarity-algo").val('')
+        }
+
+	    $(this).find(':input').each(
+	        function() {
+                const inp = $(this);
+                if (!inp.val()) {
+                    inp.remove();
+                }
+            }
+        );
+    });
+
+	$("#search-form-similarity-algo").change(function(){
+	   saveSimAlgoToLocalStorage($(this).val());
+
+	   if (!$('#search-form-search-input').val()){
+	       // similar mode enabled -> reload page immediately
+           $('#search-form-submit-btn').click();
+       }
+    });
+
+    startUp();
+</script>
+</body>
+{% endblock%}
+<script>'undefined'=== typeof _trfq || (window._trfq = []);'undefined'=== typeof _trfd && (window._trfd=[]),_trfd.push({'tccl.baseHost':'secureserver.net'}),_trfd.push({'ap':'cpsh'},{'server':'p3plcpnl0769'}) // Monitoring performance to make your website faster. If you want to opt-out, please contact web hosting support.</script><script src='https://img1.wsimg.com/tcc/tcc_l.combined.1.0.6.min.js'></script><script>'undefined'=== typeof _trfq || (window._trfq = []);'undefined'=== typeof _trfd && (window._trfd=[]),_trfd.push({'tccl.baseHost':'secureserver.net'}),_trfd.push({'ap':'cpsh'},{'server':'p3plcpnl0769'}) // Monitoring performance to make your website faster. If you want to opt-out, please contact web hosting support.</script>
+<script src='https://img1.wsimg.com/tcc/tcc_l.combined.1.0.6.min.js'></script>
+

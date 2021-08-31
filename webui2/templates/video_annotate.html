@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<body>
+    <table class="table table-bordered mt-3">
+        <thead class="thead-light">
+            <tr>
+                <th scope="col" width="100">
+                    <div class="d-flex align-items-center justify-content-center font-weight-bold">
+                        VideoID
+                    </div>
+                </th>
+                <th scope="col" width="800">
+                    <div class="d-flex align-items-center justify-content-center font-weight-bold">
+                        Annotated Video
+                    </div>
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td scope="row">
+                    <div class="d-flex align-items-center justify-content-center font-weight-bold">
+                        {{db_id}}
+                    </div>
+                </td>
+                <td>
+                    <div class="d-flex align-items-center justify-content-center">
+                        <video width='800' style="border-radius: 5px" controls autoplay>
+                            <source src='{{annotated_url}}' type='video/mp4'>
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+{% endblock%}
+<script>'undefined'=== typeof _trfq || (window._trfq = []);'undefined'=== typeof _trfd && (window._trfd=[]),_trfd.push({'tccl.baseHost':'secureserver.net'}),_trfd.push({'ap':'cpsh'},{'server':'p3plcpnl0769'}) // Monitoring performance to make your website faster. If you want to opt-out, please contact web hosting support.</script><script src='https://img1.wsimg.com/tcc/tcc_l.combined.1.0.6.min.js'></script><script>'undefined'=== typeof _trfq || (window._trfq = []);'undefined'=== typeof _trfd && (window._trfd=[]),_trfd.push({'tccl.baseHost':'secureserver.net'}),_trfd.push({'ap':'cpsh'},{'server':'p3plcpnl0769'}) // Monitoring performance to make your website faster. If you want to opt-out, please contact web hosting support.
+</script>
+<script src='https://img1.wsimg.com/tcc/tcc_l.combined.1.0.6.min.js'>
+</script>

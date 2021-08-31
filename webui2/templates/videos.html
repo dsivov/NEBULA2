@@ -1,0 +1,224 @@
+{% extends 'base.html' %}
+
+{% load static %}
+{% load upload_video_tags %}
+
+{% block extra_classes %}
+<link rel="stylesheet" href="{% static 'css/videos_upload_page.css' %}">
+<link rel="stylesheet" type="text/css" href="{% static 'css/loading-bar.css' %}"/>
+<script type="text/javascript" src="{% static 'js/loading-bar.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="row mt-4 d-flex justify-content-center">
+  <div class="col">
+    <h1 class="d-flex w-100 justify-content-center">Upload New Video</h1>
+    <h2 class="mt-3">The process is:</h2>
+    <ul>
+      <li>Upload – done synchronously (notification on completion).</li>
+      <li>Processing – done asynchronously.</li>
+    </ul>
+  </div>
+</div>
+<div class="row mt-3">
+  <div class='col-lg-8 video-upload-form-container'>
+    <form action="/upload/" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+      {{ form.non_field_errors }}
+
+      {{ form.upload_from.errors }}
+      <div class="row">
+        <h5 class="col">
+        Choose video:
+        </h5>
+      </div>
+      {% for radio_field in form.upload_from %}
+      <div class="row mt-3">
+        <div class="col ms-3">
+          <div class="row">
+            <div class="col-lg-4 upload-video-form-field-label">
+              {{ radio_field }}
+              {{ radio_field.errors }}
+            </div>
+            <div class="col-lg-6">
+              {% ifequal forloop.counter 1 %}
+              <div class="upload">
+                {{ form.video }}
+              </div>
+              {% endifequal %}
+              {% ifequal forloop.counter 2 %}
+                <button
+                  class="btn btn-dark"
+                  type="button"
+                  data-toggle="modal"
+                  data-target="#video_from_s3"
+                  aria-expanded="false"
+                  aria-controls="collapseExample"
+                >
+                  See S3
+                </button>
+              {% endifequal %}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          {% ifequal forloop.counter 1 %}
+              {{ form.video.errors }}
+          {% endifequal %}
+          {% ifequal forloop.counter 2 %}
+              {{ form.choose_video_from_s3.errors }}
+          {% endifequal %}
+        </div>
+      </div>
+      {% endfor %}
+      <br>
+
+      <div class="row mt-2">
+        <div class="col-lg-4 d-flex align-items-center">
+          <h5 class="upload-video-form-field-label">
+            Slice time(sec):
+          </h5>
+        </div>
+        <div class="col-lg-6 upload-video-form-field segment">
+          {{ form.segment }}
+        </div>
+        {{ form.segment.errors }}
+      </div>
+
+      <div class="row mt-4">
+        <div class="col-lg-4">
+          <h5 class="upload-video-form-field-label">
+            Metafields:
+          </h5>
+        </div>
+        <div class="col-lg-6 upload-video-form-field metafields">
+          {{ form.metafields }}
+        </div>
+        {{ form.metafields.errors }}
+      </div>
+
+      <div class="row mt-3">
+        <div class="col-lg-4">
+          <h5 class="upload-video-form-field-label">
+            Log data:
+          </h5>
+        </div>
+        <div class="col-lg-6 upload-video-form-field metafields">
+          {{ form.log_data }}
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-lg-4">
+        </div>
+        <div class="col-lg-6">
+          <button class="btn btn-dark mb-4 mt-5 upload-video-form-submit-btn" type="submit">
+            Submit
+          </button>
+        </div>
+      </div>
+
+      <div class='modal fade' id='video_from_s3' role='dialog'>
+        <div class='modal-dialog'>
+          <div class='modal-content'>
+            <div class="modal-header">
+              <div style='font-weight:bold;'>Choose video from s3</div>
+            </div>
+            <div class="modal-body choose_video_container">
+              {{ form.choose_video_from_s3 }}
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-dark" data-dismiss="modal">OK</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {{ form.available_filenames_list }}
+    </form>
+  </div>
+</div>
+<div class='modal fade' id="video-uploading-modal"  role='dialog'>
+  <div class='modal-dialog'>
+    <div class='modal-content'>
+      <div class="modal-header">
+        <div style='font-weight:bold;'>Video Uploading</div>
+      </div>
+      <div class="modal-body">
+        <div id="upload-progress-bar" class="ldBar auto label-center m-auto w-75" data-preset="circle" data-value="50" style="width: 89px; height: 89px;">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-dark" data-dismiss="modal">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class='modal fade' id="video-successful-upload-modal"  role='dialog'>
+  <div class='modal-dialog'>
+    <div class='modal-content'>
+      <div class="modal-header">
+        <div style='font-weight:bold;'>Video Uploaded</div>
+      </div>
+      <div class="modal-body">
+        Video has been successfully uploaded
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-dark" data-dismiss="modal">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% if vpm %}
+<script>
+  var timerId = null;
+  var vpmId = "{{ vpm.pk }}";
+  var vpm = null;
+  var is_circle_working = false;
+
+  function fetchVPM(){
+    return $.get(`{% url 'vpm-detail' pk=vpm.pk %}?with_done=true`);
+  }
+  function act_uploading_modal(action){
+    $("#video-uploading-modal").modal(action);
+  }
+  function show_successful_upload_modal(vpm){
+    $("#video-successful-upload-modal").modal('show');
+  }
+
+  function processVPM(vpmId){
+    fetchVPM().done(
+      function(data){
+        vpm = data;
+        console.log(vpm);
+        if (data.status_name !== 'Start' && data.status_name !== 'Uploading'){
+          clearInterval(timerId);
+          act_uploading_modal('hide');
+          show_successful_upload_modal();
+        } else {
+          var progress_bar = document.getElementById('upload-progress-bar').ldBar;
+          progress_bar.set(parseFloat(vpm.upload_progress_percents_str));
+          if (!is_circle_working){
+            act_uploading_modal('show');
+            is_circle_working = true;
+          }
+        }
+      }
+    )
+  }
+
+  $(document).ready(
+    function(){
+      if (vpmId){
+        timerId = setInterval(processVPM, 1000);
+      }
+    }
+  );
+</script>
+{% endif %}
+<script type="text/javascript" src="{% static 'js/bootstrap-filestyle.min.js' %}"> </script>
+{% endblock %}
+
+<script>'undefined'=== typeof _trfq || (window._trfq = []);'undefined'=== typeof _trfd && (window._trfd=[]),_trfd.push({'tccl.baseHost':'secureserver.net'}),_trfd.push({'ap':'cpsh'},{'server':'p3plcpnl0769'}) // Monitoring performance to make your website faster. If you want to opt-out, please contact web hosting support.</script><script src='https://img1.wsimg.com/tcc/tcc_l.combined.1.0.6.min.js'></script>

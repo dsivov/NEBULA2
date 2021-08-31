@@ -1,0 +1,438 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load search_video_tags %}
+
+{% block extra_classes %}
+	<link rel="stylesheet" type="text/css" href="{% static 'css/video_page.css' %}">
+	<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<table class="table mt-3">
+    <thead class="thead-light">
+        <tr>
+            <th scope="col" class="header-column-sortable name-column">
+                Name
+            </th>
+            <th scope="col">
+                Metadata
+            </th>
+            <th scope="col">
+                Sections
+            </th>
+            <th scope="col" class="slice-name-column">
+                Filename
+            </th>
+            <th scope="col">
+                Graph ID
+            </th>
+            <th scope="col" class="tags-column">
+                Features
+            </th>
+        </tr>
+    </thead>
+    <tbody id="searchtable-body">
+        <tr id="video-{{ video.db_id }}">
+            <td class="name-column">{{ video.name }}</td>
+            <td>{{ video.metadata }}</td>
+            <td>{{ video.slice_interval }}</td>
+            <td class="slice-name-column">{{ video.slice_name }}</td>
+            <!--<td>{{ video.timestamp }}</td>-->
+            <td>
+                <div class="video-db-id">{{ video.db_id }}</div>
+                <div class="d-flex flex-wrap m-1">
+                    <a
+                        href="{% url 'export-graph-db-png' %}?db_id={{ video.db_id }}"
+                        class="btn btn-dark m-1"
+                        target="_blank"
+                    >
+                        SVG
+                    </a>
+                    <a
+                        href="{% url 'export-graph-db-json' %}?db_id={{ video.db_id }}"
+                        class="btn btn-dark m-1"
+                        target="_blank"
+                    >
+                        JSON
+                    </a>
+                </div>
+            </td>
+            <td class="tags-column">
+                <div
+                    id="video-tags-text-{{ video.db_id }}"
+                    class="vpm-video-tags overflow-auto"
+                >
+                    {% if video.main_tags %}{{ video.main_tags }}{% else %}-{%endif%}
+                </div>
+                <div class="d-flex flex-wrap m-1">
+                    <button
+                            type="button"
+							class="btn btn-dark m-1 little_font_column"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#TagsModal{{ forloop.counter }}"
+                            aria-expanded="false"
+                            aria-controls="TagsModal{{ forloop.counter }}"
+                    >Open All</button>
+                    <div class="collapse tags-collapsible-window" id="TagsModal{{ forloop.counter }}">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <p
+                                    class="modal-title"
+                                    id="TagsModalTitle{{ forloop.counter }}"
+                                    style="font-size: 0.9rem; font-weight: bold"
+                                >
+                                    {{ video.db_id }} - Tags and Graph Story
+                                </p>
+                                <button
+                                    type="button"
+                                    class="btn-close little_font_column"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#TagsModal{{ forloop.counter }}"
+                                    aria-label="Close"
+                                ></button>
+                            </div>
+                            <div class="modal-body tags-collapsible-window-body" id="TagsModalBody{{ forloop.counter }}">
+                                <div class="row">
+                                    <div class="col-4">
+                                        <p style="font-size: 0.9rem; font-weight: bold">Tags List</p>
+                                        <ul>
+                                            {% for tag in video.tags %}
+                                                <li>{{ tag }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                    <div class="col-8">
+                                        <p style="font-size: 0.9rem; font-weight: bold">Graph Story</p>
+                                        <p>{{ video.graph_history }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <form action="annotate" method="POST">
+                        {% csrf_token %}
+
+                        <input type="hidden" name="video_url" value='{{ video.url }}'/>
+                        <input type="hidden" name="db_id" value='{{ video.db_id }}'/>
+                        <input type="submit" class="btn btn-dark m-1" value="Annotate"/>
+
+                    </form>
+                </div>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<div class="d-flex flex-column align-items-center">
+    <div class="main-video-container">
+        <video id='main-video' class="rounded" width='660' controls>
+            <source src='{{ video.url }}' type='video/mp4'>
+            Your browser does not support the video tag.
+        </video>
+    </div>
+    <div class="additional-manip-container">
+        <div class="additional-manip-container-scenes">
+            <p>Scenes</p>
+            <div onclick="ScenesManipulations.prev()" id="scenes-prev" class="scenes-go-to">
+                <i class="fa fa-step-backward"></i>
+            </div>
+            <div onclick="ScenesManipulations.next()" id="scenes-next" class="scenes-go-to">
+                <i class="fa fa-step-forward"></i>
+            </div>
+        </div>
+        <div id="video-moments-search-query-container" class="additional-manip-container-moments">
+            <form onsubmit="AdditionalItemsActions.getVideoMoments(event)" class="additional-manip-container-moments">
+                <label for="video-moments-search-query" style="white-space: nowrap">Find Moments</label>
+                <input
+                    type="text"
+                    id="video-moments-search-query"
+                    class="form-control"
+                    style="font-size: 14px"
+                    placeholder="Enter a phrase"
+                    aria-label="Enter a phrase"
+                >
+                <button class="find-moments-btn">
+                    <i class="fa fa-search"></i>
+                </button>
+            </form>
+        </div>
+        <div class="additional-manip-container-recommendations">
+            <button id="get-recommendations-btn" onclick="AdditionalItemsActions.getRecommendations()" class="btn btn-dark" style="font-size: 14px">
+                Find Alike
+            </button>
+        </div>
+    </div>
+    <div id="additional-items-window">
+        <div id="additional-items-window-container" class="row"></div>
+    </div>
+</div>
+<div class="modal" id="loadSpinnerModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-loader" role="document">
+        <div class="spinner-border" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+</div>
+<script>
+class API{
+    baseURL = '/'
+
+    static findVideoMomentsRequest(id, txt, successFunction){
+        $.get(`{% url 'find-video-moments' %}?id=${id}&txt=${txt}`, successFunction);
+    }
+
+    static getRecommendationsRequest(id, position, successFunction){
+        $.get(`{% url 'get-video-recommendations' %}?id=${id}&position=${position}`, successFunction);
+    }
+}
+
+
+class AdditionalItemsActions{
+    static getRecommendations(){
+        MainVideoManagement.pauseMainVideo();
+        const position = MainVideoManagement.getMainVideoCurrentPosition();
+        this.showLoader();
+
+        const successFunction = data => {
+            document.getElementById('get-recommendations-btn').blur();
+            this.setRecommendations(data);
+            this.hideLoader();
+        }
+        API.getRecommendationsRequest(mainVideoID, position, successFunction);
+    }
+
+    static setRecommendations(data){
+        AdditionalItems.removeAdditionalItems();
+        AdditionalItems.addAdditionalItems(AdditionalVideo, data);
+    }
+
+    static getVideoMoments(e){
+        e.preventDefault();
+        MainVideoManagement.pauseMainVideo();
+        this.showLoader();
+        const txtElement = document.getElementById('video-moments-search-query');
+        const txt = txtElement.value;
+        const successFunction = data => {
+            txtElement.blur();
+            this.setVideoMoments(data);
+            this.hideLoader();
+        }
+        API.findVideoMomentsRequest(mainVideoID, txt, successFunction);
+    }
+
+    static setVideoMoments(data){
+        AdditionalItems.removeAdditionalItems();
+        AdditionalItems.addAdditionalItems(AdditionalSlide, data);
+    }
+
+    static showLoader(){
+        console.log('asd')
+        $("#loadSpinnerModal").modal('show');
+        $(".modal-backdrop").css("background-color", "#ffffff");
+    }
+
+    static hideLoader(){
+        console.log('das')
+        $("#loadSpinnerModal").modal('hide');
+    }
+}
+
+
+class MainVideoManagement{
+    static getMainVideoElement(){
+        return document.getElementById('main-video');
+    }
+
+    static pauseMainVideo(){
+        const videoElement = this.getMainVideoElement();
+        if (!videoElement.paused){
+            videoElement.pause();
+        }
+    }
+
+    static getMainVideoCurrentPosition(){
+        const videoElement = this.getMainVideoElement();
+        return videoElement.currentTime;
+    }
+
+    static runMainVideoAt(position){
+        const videoElement = this.getMainVideoElement();
+        videoElement.currentTime = position;
+    }
+}
+
+
+class AdditionalItems{
+    static additionalItems = []
+
+    static getAdditionalItemsWindow(){
+        return document.getElementById('additional-items-window-container');
+    }
+
+    static removeAdditionalItems(){
+        const additionalItemsWindow = this.getAdditionalItemsWindow();
+        additionalItemsWindow.innerHTML = "";
+        this.additionalItems = []
+    }
+
+    static addAdditionalItems(clas, data){
+        const elementsHTML = data.map(
+            (elData, index) => clas.toHTML(index, elData)
+        ).join('');
+        const additionalItemsWindow = this.getAdditionalItemsWindow();
+        additionalItemsWindow.insertAdjacentHTML('beforeend', elementsHTML);
+        this.additionalItems = data;
+        data.map((data, index) => clas.onAfterElementAdd(index, data))
+    }
+}
+
+
+class AdditionalVideo{
+    static getVideoElement(index){
+        return document.getElementById(`additional-element-${index}-video`);
+    }
+
+    static toHTML(index, elementData){
+        return `
+            <div class="col-md-6 mt-3 mb-3" id="additional-element-${index}-container">
+                <div class="row">
+                    <div class="col">
+                        <video id="additional-element-${index}-video" class="rounded" width="300" controls>
+                            <source src="${elementData.src}" type="video/mp4"></source>
+                            Your browser does not support HTML5 video.
+                        </video>
+                    </div>
+                    <div class="col">
+                        <div class="mt-2">${elementData.name}</div>
+                        <div class="mt-2">${elementData.db_id}</div>
+                        <div class="mt-2">${elementData.position_to_display}</div>
+                        <a
+                            class="btn btn-dark mt-3"
+                            href="{% url 'video-detail-page' %}?id=${elementData.db_id}&position=${elementData.position}"
+                        >Show</a>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    static onAfterElementAdd(index, elementData){
+        const videoElement = this.getVideoElement(index);
+        videoElement.addEventListener('loadeddata', function() {
+           videoElement.currentTime = elementData.position;
+           console.log(`set position for additional element with index = ${index}`)
+        }, false);
+    }
+}
+
+
+class AdditionalSlide{
+    static toHTML(index, elementData){
+        return `
+            <div class="col-md-4 mt-3 mb-3" id="additional-element-${index}-container" class="additional-slide">
+                <div class="row">
+                    <div class="col">
+                        <img src="${elementData.src}" alt="" class="additional-slide-image" />
+                    </div>
+                    <div class="col">
+                        <div class="mt-2">${elementData.position_to_display}</div>
+                        <button
+                            class="btn btn-dark mt-3"
+                            onclick="MainVideoManagement.runMainVideoAt(${elementData.position})"
+                        >Jump!</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    static onAfterElementAdd(index, elementData){}
+}
+
+</script>
+<script>
+const video = JSON.parse('{{ video_json|safe }}');
+const mainVideoID = "{{ id }}";
+const mainVideoStartPosition = {{ position }};
+const scenes = JSON.parse('{{ scenes|safe }}');
+
+MainVideoManagement.getMainVideoElement().addEventListener('loadeddata', function() {
+    // here 'this' is the video element
+    this.currentTime = mainVideoStartPosition;
+    console.log('set main video time at startup')
+}, false);
+
+class ScenesManipulations{
+    static currentIndex = 0
+    static goToPrevSceneElement = document.getElementById('scenes-prev')
+    static goToNextSceneElement = document.getElementById('scenes-next')
+
+    static next(){
+        this.currentIndex += 1;
+        const scene = scenes[this.currentIndex];
+        this.setScene(scene);
+    }
+
+    static prev(){
+        this.currentIndex -= 1;
+        const scene = scenes[this.currentIndex];
+        this.setScene(scene);
+    }
+
+    static getPositionFromScene(scene){
+        return scene[0];
+    }
+
+    static setScene(scene){
+        const position = this.getPositionFromScene(scene);
+        MainVideoManagement.runMainVideoAt(position);
+        this.onAfterSetScene();
+    }
+
+    static setStartCurrentIndex(){
+        const position = mainVideoStartPosition;
+        if (!scenes.length){
+            this.currentIndex = 0;
+            return;
+        }
+
+        let index = 0;
+        for (let i = 0; i < scenes.length; ++i){
+            const scene = scenes[i];
+            if (position < scene[0]){
+                break;
+            } else if (position >= scene[0] && position < scene[1]){
+                index = i;
+                break;
+            } else {
+                index = Math.max(0, i - 1);
+            }
+        }
+
+        this.currentIndex = index;
+    }
+
+    static enableGoToButton(el){
+        el.classList.remove('disabled');
+        el.style.pointerEvents = 'auto';
+    }
+
+    static disableGoToButton(el){
+        el.classList.add('disabled');
+        el.style.pointerEvents = 'none';
+    }
+
+    static onAfterSetScene(){
+        this.enableGoToButton(this.goToPrevSceneElement);
+        this.enableGoToButton(this.goToNextSceneElement);
+
+        if (this.currentIndex === 0){
+            this.disableGoToButton(this.goToPrevSceneElement);
+        } else if (this.currentIndex === scenes.length - 1){
+            this.disableGoToButton(this.goToNextSceneElement);
+        }
+    }
+}
+
+ScenesManipulations.setStartCurrentIndex();
+ScenesManipulations.onAfterSetScene();
+</script>
+{% endblock %}

@@ -1,0 +1,54 @@
+.vpm-video-name{
+    max-width: 155px;
+    min-width: 155px;
+    word-break: break-all;
+}
+
+.vpm-status-text{
+    padding-left: 5px;
+    padding-right: 5px;
+    text-align: center;
+    border-radius: 2px;
+    background-color: #999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.vpm-status-text.Start{
+    background-color: cornflowerblue;
+}
+
+.vpm-status-text.Uploading{
+    background-color: mediumorchid;
+}
+
+.vpm-status-text.Uploaded{
+    background-color: indianred;
+}
+
+.vpm-status-text.Processing{
+    background-color: lightsalmon;
+}
+
+.vpm-status-text.Done{
+    background-color: lightgreen;
+}
+
+.vpm-table-spinner-container{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    min-height: 100px;
+}
+
+.vpm-nothing-to-display-container{
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.vpm-nothing-to-display-container.hide{
+    visibility: hidden;
+}

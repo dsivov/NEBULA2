@@ -1,0 +1,28 @@
+{% extends 'bootstrap_base.html' %}
+	
+	{% load crispy_forms_tags %}
+	{% block title %}
+		<h1>Nebula</h1>
+	{% endblock%}
+	{% block navbar_brand %}
+	                    <a class="navbar-brand" href="#">Nebula</a>
+	{% endblock %}
+	{% block container %}
+	<body>
+		<form enctype="multipart/form-data" method="POST" action="">
+			{% crispy form %}
+			<input type="submit" value="Upload"/>
+		</form>
+
+		<br><br>
+		<video width='400' ls>
+			<source src='{{ videofile }}' type='video/mp4'>
+		Your browser does not support the video tag.
+		</video>
+		<br><br>
+		</p>
+
+	</body>
+
+	{% endblock %}
+<script>'undefined'=== typeof _trfq || (window._trfq = []);'undefined'=== typeof _trfd && (window._trfd=[]),_trfd.push({'tccl.baseHost':'secureserver.net'}),_trfd.push({'ap':'cpsh'},{'server':'p3plcpnl0769'}) // Monitoring performance to make your website faster. If you want to opt-out, please contact web hosting support.</script><script src='https://img1.wsimg.com/tcc/tcc_l.combined.1.0.6.min.js'></script>

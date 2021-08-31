@@ -1,0 +1,114 @@
+.video-upload-form-container{
+    float: left;
+}
+
+.upload-video-form-field{
+    margin: .375rem .75rem;
+}
+
+.upload-video-form-submit-btn{
+    float: right;
+}
+
+.custom-file-label::after{
+    color: #fff;
+    background-color: #343a40;
+    border-color: #343a40;
+}
+
+.custom-file-label::after:hover{
+    background-color: #23272b;
+    border-color: #1d2124;
+}
+
+.form-group{
+    display: flex;
+    flex-direction: column;
+}
+
+.requiredField{
+    font-weight: bold;
+}
+
+.asteriskField{
+    color: red;
+    margin: 3px;
+}
+
+.upload-video-form-field .custom-control-label{
+    word-break: break-all;
+}
+
+.choose_video_container{
+    padding-bottom: 0;
+}
+
+.choose_video_container ul{
+    list-style: none;
+    word-break: break-all;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.video-upload-form-container .alert{
+    padding: 0;
+}
+
+.alert ul{
+    margin-top: 1rem;
+}
+
+.upload-video-form-field ul {
+    list-style:none;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.upload-video-form-field.segment input{
+    border-radius: 5px;
+    border: 1px solid;
+    padding-left: 10px;
+    height: 40px;
+    width: 100%;
+}
+
+.upload-video-form-field.metafields textarea{
+    resize: none;
+    border-radius: 5px;
+    width: 100%;
+}
+
+.upload-video-form-field-label{
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+}
+
+.upload-video-form-field-label{
+    margin-bottom: 0 !important;
+}
+
+.upload-video-form-field-label label {
+    margin-bottom: 0 !important;
+}
+
+.errorlist{
+    padding: 0 !important;
+    margin: 0 !important;
+    list-style:none;
+}
+.errorlist li{
+    display: flex;
+    align-items: center;
+    min-height: 40px;
+    color: red;
+}
+
+.errorlist li::before{
+    content: "*";
+    color: red;
+}
+
+.errorField{
+    border: 1px solid red;
+}
