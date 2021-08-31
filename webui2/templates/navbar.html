@@ -1,0 +1,43 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <a class="navbar-brand ms-3" href="/">Nebula</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        {% url 'video-search' as video_search_url %}
+        {% url 'video-upload' as video_upload_url %}
+        {% url 'processing-page' as processing_page_url %}
+        {% url 'settings-page' as settings_page_url %}
+        <ul class="navbar-nav me-auto">
+            <li class="nav-item {% ifequal video_search_url request.path %}active{% endifequal %}">
+                <a class="nav-link" href="{{ video_search_url }}">Search</a>
+            </li>
+            <li class="nav-item {% ifequal video_upload_url request.path %}active{% endifequal %}">
+                <a class="nav-link" href="{{ video_upload_url }}">Upload</a>
+            </li>
+            <li class="nav-item {% ifequal processing_page_url request.path %}active{% endifequal %}">
+                <a class="nav-link" href="{{ processing_page_url }}">Processing</a>
+            </li>
+            <li class="nav-item {% ifequal settings_page_url request.path %}active{% endifequal %}">
+                <a class="nav-link" href="{{ settings_page_url }}">Settings</a>
+            </li>
+        </ul>
+        <form hidden class="form-inline my-2 my-lg-0" id="navbar-search-form">
+            <input class="form-control me-sm-2" id="navbar-search-input" type="search" placeholder="Search" aria-label="Search">
+            <button class="btn btn-outline-light my-2 my-sm-0" type="submit">Search</button>
+        </form>
+    </div>
+</nav>
+
+<script>
+    function onNavBarSearchSubmit(e){
+        e.preventDefault();
+        var search_url = '{{ video_search_url }}';
+        var query_string = document.getElementById("navbar-search-input").value;
+        console.log(search_url);
+        console.log(query_string);
+        window.location.href = search_url + "?query=" + query_string;
+    }
+    document.getElementById("navbar-search-form").addEventListener("submit", onNavBarSearchSubmit);
+</script>

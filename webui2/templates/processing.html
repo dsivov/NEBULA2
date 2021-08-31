@@ -1,0 +1,297 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block extra_classes %}
+<link rel="stylesheet" href="{% static 'css/processing_page.css' %}">
+{% endblock %}
+
+
+{% block content %}
+<div class='container mt-4'>
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">#</th>
+          <th scope="col">Upload Date</th>
+          <th scope="col">Video File</th>
+          <th scope="col">Slicing</th>
+          <th scope="col">Analysis Log</th>
+        </tr>
+      </thead>
+      <tbody id='vpm-table'>
+        <tr>
+          <td colspan="5">
+            <div class="vpm-table-spinner-container">
+              <div class="spinner-border" role="status">
+                <span class="sr-only">Loading...</span>
+              </div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  <h5
+    class='vpm-nothing-to-display-container hide mt-4'
+    id='vpm-nothing-to-display-container'
+  >
+    No video currently in processing
+  </h5>
+</div>
+<div class='modal fade' id="modal-log" role='dialog'>
+  <div class='modal-dialog' style="min-width: 1000px;">
+    <div class='modal-content'>
+      <div class="modal-header" id="modal-log-header"></div>
+      <div class="modal-body" id="modal-log-body">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-dark" data-dismiss="modal" onclick="hideLog()">
+            OK
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let vpms = null;
+
+  function fetchVPMs(){
+    return $.get("{% url 'vpm-list' %}");
+  }
+
+function createTableHTMLRow(vpm, index){
+    const slicing = vpm['has_slices'] ? "DONE" : (vpm['status_name'] == "Processing") ? "In progress" : "";
+
+    const percentage_div = (vpm['status_name'] === "Uploading") ? ` (${vpm['upload_progress_percents_str']})` : ``;
+    const video_name = vpm['video_name'];
+    const vpm_id = vpm['pk'];
+    return `
+      <tr id="${vpm_id}-table-row">
+        <th scope="row">${index}</th>
+        <td id="${vpm_id}-uploadedAt">${vpm['uploaded_at']}</td>
+        <td id="${vpm_id}-videoName" class="vpm-video-name">${video_name}</td>
+        <td id="${vpm_id}-slicing" class="vpm-slicing">${slicing}</td>
+        <td class="vpm-status">
+          <div class="row">
+              <div
+                id="${vpm_id}-status"
+                class="vpm-status-text ${vpm['status_name']} col-lg-7"
+              >${vpm['status_name']}${percentage_div}</div>
+              <div class="col-lg-5">
+                <button
+                  class="btn btn-dark"
+                  style="font-size:14px;"
+                  onClick="showLog(${vpm_id})"
+                >
+                  Show Log
+                </button>
+              </div>
+          </div>
+        </td>
+      </tr>
+    `;
+}
+
+  function createTableHTML(vpmsData){
+    const tableElement = document.getElementById("vpm-table");
+    const nothing_to_display_el = document.getElementById(
+      'vpm-nothing-to-display-container'
+    );
+
+    if (!vpmsData || !vpmsData.length){
+      nothing_to_display_el.classList.remove('hide');
+    } else {
+      nothing_to_display_el.classList.add('hide');
+    }
+
+    let html = '';
+    vpmsData.forEach(
+      function(vpm, index){
+        html = html + createTableHTMLRow(vpm, index);
+      }
+    );
+    tableElement.innerHTML = html;
+  }
+
+  function updateTableHTML(vpmsData){
+    const tableElement = document.getElementById("vpm-table");
+    const nothing_to_display_el = document.getElementById(
+      'vpm-nothing-to-display-container'
+    );
+
+    if (!vpmsData || !vpmsData.length){
+      nothing_to_display_el.classList.remove('hide');
+      tableElement.innerHTML = "";
+      return;
+    }
+
+    nothing_to_display_el.classList.add('hide');
+
+    vpmsData.forEach(
+      function(vpm) {
+        const vpm_id = vpm['pk'];
+
+        if (!document.getElementById(`${vpm_id}-table-row`)){
+            const row = document.createElement('tr');
+            row.id = `${vpm_id}-table-row`;
+            const index = tableElement.childElementCount;
+            row.innerHTML = createTableHTMLRow(vpm, index);
+            tableElement.appendChild(row);
+        } else {
+            const slicing = vpm['has_slices'] ? "DONE" : (vpm['status_name'] === "Processing") ? "In progress" : "";
+            const percentage_div = (vpm['status_name'] === "Uploading") ? ` (${vpm['upload_progress_percents_str']})` : ``;
+            const video_name = vpm['video_name'];
+
+            const elementIDToValue = {
+              [`${vpm_id}-uploadedAt`]: `${vpm['uploaded_at']}`,
+              [`${vpm_id}-videoName`]: `${video_name}`,
+              [`${vpm_id}-slicing`]: `${slicing}`,
+              [`${vpm_id}-status`]: `${vpm['status_name']}${percentage_div}`,
+            }
+
+            Object.keys(elementIDToValue).forEach(
+              elementID => {
+                const element = document.getElementById(elementID);
+                if (
+                    elementID === `${vpm_id}-status`
+                    && element.className !== `vpm-status-text ${vpm['status_name']} col-lg-7`
+                ){
+                    element.className = `vpm-status-text ${vpm['status_name']} col-lg-7`;
+                }
+
+                if (element.innerHTML !== elementIDToValue[elementID]){
+                  element.innerHTML = elementIDToValue[elementID];
+                }
+              }
+            );
+        }
+      }
+    )
+  }
+
+  function updateVPMsTable(isInitialLoad=false){
+    fetchVPMs().done(
+      function(data){
+        vpms = data;
+        if (currentLogOpenedVPMId){
+            updateLog(currentLogOpenedVPMId);
+        }
+
+        if (!document.getElementById("vpm-table").innerHTML || isInitialLoad){
+            createTableHTML(data);
+        } else {
+            updateTableHTML(data);
+        }
+      }
+    );
+  }
+
+  function createLogSliceHTML(events, slice_name){
+        const sliceEvents = events[slice_name]['events']
+        const sliceStatus = events[slice_name]['status']
+        const sliceEventsTableBodyHTML = Object.keys(sliceEvents).reduce(
+            function(sliceEvsHTML, slice_event_name){
+                const sliceEventData = sliceEvents[slice_event_name];
+                const takenEventTime = sliceEventData['took'] ? `${sliceEventData['took']}ms` : '';
+                const startEventTime = sliceEventData['start'] ? sliceEventData['start'] : '';
+                const endEventTime = sliceEventData['end'] ? sliceEventData['end'] : '';
+                return sliceEvsHTML + `
+                    <tr>
+                        <th scope="row">${slice_event_name}</th>
+                        <td>${startEventTime}</td>
+                        <td>${takenEventTime}</td>
+                        <td>${endEventTime}</td>
+                    </tr>
+                `
+            },
+            ``
+        );
+        return `
+            <div id="log-slice-${slice_name}">
+                <h5 class="font-weight-bold">${slice_name} (${sliceStatus})</h5>
+                <table class='table mb-4'>
+                    <thead>
+                        <tr>
+                            <th scope="col">Slice Name</th>
+                            <th scope="col">Time started</th>
+                            <th scope="col">Time took</th>
+                            <th scope="col">Time ended</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${sliceEventsTableBodyHTML}
+                    </tbody>
+                </table>
+            </div>
+        `;
+  }
+
+  function createLogBody(vpm){
+    const events = vpm['events'] ? JSON.parse(vpm['events']) : {};
+    return (events && Object.keys(events).length) ? Object.keys(events).reduce(
+        function(evsHTML, slice_name){
+            return evsHTML + createLogSliceHTML(events, slice_name);
+        },
+        ``
+    ) : `<h5>Events for this video do not exist yet</h5>`;
+  }
+
+  function showLog(vpmPk){
+    //clearInterval(timerId);
+    currentLogOpenedVPMId = vpmPk;
+    vpm = vpms.find(function(v){return v.pk === vpmPk});
+    const logBody = createLogBody(vpm);
+
+    const modalBodyEl = document.getElementById('modal-log-body');
+    const modalHeaderEl = document.getElementById('modal-log-header');
+
+    modalBodyEl.innerHTML = logBody;
+    modalHeaderEl.innerHTML = `<h3>${vpm['video_name']} log</h3>`
+
+    $('#modal-log').modal('show');
+  }
+
+  function updateLog(vpmPk){
+    vpm = vpms.find(function(v){return v.pk === vpmPk});
+    const events = vpm['events'] ? JSON.parse(vpm['events']) : {};
+    if (events && Object.keys(events).length){
+        Object.keys(events).forEach(
+            slice_name => {
+                const newLogSliceHTML = createLogSliceHTML(events, slice_name);
+                const sliceHTML = document.getElementById(`log-slice-${slice_name}`);
+                if (sliceHTML){
+                    if (
+                    sliceHTML.innerHTML
+                        !== newLogSliceHTML
+                    ){
+                        sliceHTML.innerHTML = newLogSliceHTML;
+                    }
+                } else {
+                    const modalBodyEl = document.getElementById('modal-log-body');
+                    const newEl = document.createElement("div");
+                    newEl.innerHTML = newLogSliceHTML;
+                    modalBodyEl.appendChild(newEl);
+                }
+            }
+        );
+    } else {
+        document.getElementById('modal-log-body').innerHTML = `
+            <h5>Events for this video do not exist yet</h5>
+        `;
+    }
+  }
+
+  function hideLog(){
+    currentLogOpenedVPMId = null;
+    updateVPMsTable();
+    //timerId = setInterval(updateVPMsTable, 5000);
+  }
+
+  $('#modal-log').on('hide.bs.modal', hideLog);
+
+  let currentLogOpenedVPMId = null;
+  updateVPMsTable(true);
+  let timerId = setInterval(updateVPMsTable, 500);
+</script>
+{% endblock %}

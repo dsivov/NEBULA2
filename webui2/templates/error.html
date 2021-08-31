@@ -1,0 +1,6 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>An error occurred</h1>
+    <h4>{% if error %}{{ error }}{% else %}Please try again later{% endif %}</h4>
+{% endblock %}

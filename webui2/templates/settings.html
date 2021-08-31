@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <form  method="POST">
+
+        {% if set_user_setting %}
+            <div class="mt-5 m-2 d-flex justify-content-between" style="height: 40px;">
+                <p>Your setting is {{ set_user_setting }}</p>
+            </div>
+        {% endif %}
+
+        <div class="mt-5 m-2 d-flex justify-content-between" style="height: 40px;">
+            <div class="d-flex">
+                <div
+                    class="font-weight-bold d-flex align-items-center"
+                    style="font-weight: bold; font-size: 0.9rem;"
+                >Settings:</div>
+                <div class="video-search-rows-input d-flex align-items-center ms-1">{{ form.size }}</div>
+                {% csrf_token %}
+                {{ form.user_settings }}
+                <div class="video-search-rows-input d-flex align-items-center ms-1">{{ form.size }}</div>
+                <div class="ms-2">
+                    <button type="submit" class="btn btn-dark" style="width: 60px;font-size: 0.9rem;">Save</button>
+                </div>
+            </div>
+        </div>
+    </form>
+{% endblock %}

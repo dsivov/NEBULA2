@@ -1,0 +1,90 @@
+.video-search-search-input input{
+    height: 40px;
+    border-radius: .25rem 0 0 .25rem;
+    border: 1px solid;
+    padding: 5px;
+    width: 200px;
+    border-right: none;
+}
+
+.video-search-search-btn{
+    border-radius: 0 .25rem .25rem 0;
+}
+
+.choose-video-checkbox{
+    margin-left: 5px;
+}
+
+.header-column-sortable{
+    cursor: pointer;
+}
+
+.video-row-hidden, .table-hidden{
+    display: none;
+}
+
+.video-row-focused{
+    border: 3px solid #6994c9;
+}
+
+.similar-video-main{
+    border: 5px solid darkred;
+}
+
+.similar-video-similar{
+    border: 3px solid #6994c9;
+}
+
+input.disabled, input:disabled{
+    cursor: default;
+}
+
+.name-column, .tags-column, .slice-name-column{
+    min-width: 155px;
+    max-width: 155px;
+    word-break: break-all;
+}
+
+.vpm-video-tags{
+    min-height: 60px;
+    max-height: 100px;
+}
+
+.video-db-id{
+    min-height: 60px;
+    max-height: 100px;
+    overflow: auto
+}
+
+#allTagsModalBody{
+    height: 200px;
+    word-break: break-all;
+}
+
+.modal-loader{
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+}
+
+.tags-column{
+    position: relative;
+}
+
+.tags-collapsible-window{
+    width: 400px;
+    position: absolute;
+    top: 79%;
+    left: -50%;
+    z-index: 100;
+}
+
+.tags-collapsible-window-body{
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.little_font_column{
+    font-size: 0.75rem;
+}

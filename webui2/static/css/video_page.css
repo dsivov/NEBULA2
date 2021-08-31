@@ -1,0 +1,95 @@
+.main-video-container{
+    margin-bottom: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+.additional-manip-container{
+    width: 660px;
+    font-size: 14px;
+    margin-bottom: 30px;
+}
+
+.additional-manip-container, .additional-manip-container-scenes,
+.additional-manip-container-moments, .additional-manip-container-recommendations {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.additional-manip-container-scenes{
+    gap: 20px;
+}
+.additional-manip-container-scenes p{
+    margin-bottom: 0;
+}
+
+.additional-manip-container-moments label{
+    margin-bottom: 0;
+    margin-right: 5px;
+}
+
+#additional-items-window{
+    min-width: 100%;
+    margin-bottom: 30px;
+}
+
+#additional-items-window-container{
+    min-height: 400px;
+    min-width: 100%;
+    border: black 1px solid;
+    overflow-y: scroll;
+}
+
+.scenes-go-to{
+    cursor: pointer;
+}
+
+.scenes-go-to.disabled{
+    cursor: auto;
+    opacity: 0.5;
+}
+
+.find-moments-btn{
+    background: none;
+    border: none;
+    cursor: pointer;
+    margin-left: 10px;
+    font-size: 20px;
+    padding: 0;
+}
+
+.additional-slide-image{
+    max-height: 120px;
+    max-width: 200px;
+}
+
+.hidden{
+    visibility: hidden;
+}
+
+.tags-column{
+    position: relative;
+}
+
+.tags-collapsible-window{
+    width: 400px;
+    position: absolute;
+    top: 79%;
+    right: 0;
+    z-index: 100;
+}
+
+.tags-collapsible-window-body{
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.modal-loader{
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+}

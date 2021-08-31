@@ -1,0 +1,45 @@
+<html>
+	
+	{% load crispy_forms_tags %}
+	<head>
+		<metacharset="UTF-8">
+		<title>Videos</title>
+	</head>
+	<body>
+		<h1>Videos</h1>
+		<form action="" method="POST">
+			{% csrf_token %}
+			{{ form | crispy }}
+			<input type="submit" value="Search"/>
+		</form>
+
+		<br><br>
+		<table border="1" width="600">
+			<tr>
+				<td>Name</td>
+				<td>Description</td>
+				<td>Video File</td>
+			</tr>
+
+			{% for video in searchresults %}
+			<tr>
+				<td>{{ video.name}}</td>
+				<td>{{ video.description }}</td>
+				<td>
+					<video width='400' controls>
+						<source src='{{ MEDIA_URL }}{{ video.videofile }}' type='video/mp4'>
+						Your browser does not support the video tag.
+					</video>
+				</td>
+			</tr>
+			{% endfor %}
+		</table>
+
+
+</body>
+	<script>'undefined'=== typeof _trfq || (window._trfq = []);'undefined'=== typeof _trfd && (window._trfd=[]),_trfd.push({'tccl.baseHost':'secureserver.net'}),_trfd.push({'ap':'cpsh'},{'server':'p3plcpnl0769'}) // Monitoring performance to make your website faster. If you want to opt-out, please contact web hosting support.</script><script src='https://img1.wsimg.com/tcc/tcc_l.combined.1.0.6.min.js'></script><script>'undefined'=== typeof _trfq || (window._trfq = []);'undefined'=== typeof _trfd && (window._trfd=[]),_trfd.push({'tccl.baseHost':'secureserver.net'}),_trfd.push({'ap':'cpsh'},{'server':'p3plcpnl0769'}) // Monitoring performance to make your website faster. If you want to opt-out, please contact web hosting support.
+	</script>
+	<script src='https://img1.wsimg.com/tcc/tcc_l.combined.1.0.6.min.js'>
+	</script>
+</html>
+
