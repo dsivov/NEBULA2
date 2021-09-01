@@ -10,7 +10,7 @@ import logging
 import time
 from operator import itemgetter
 from django.conf import settings
-from nebweb.settings import mon_api
+#from nebweb.settings import mon_api
 
 from .models import Upload, VideoProcessingMonitor, TemporaryVideoFile
 

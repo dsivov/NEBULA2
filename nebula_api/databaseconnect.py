@@ -5,7 +5,7 @@ class DatabaseConnector():
     def connect_db(self, dbname):
         #client = ArangoClient(hosts='http://ec2-18-219-43-150.us-east-2.compute.amazonaws.com:8529')
         #client = ArangoClient(hosts='http://localhost:8529')
-        client = ArangoClient(hosts='http://172.31.11.112:8529')
+        client = ArangoClient(hosts='http://ec2-18-158-123-0.eu-central-1.compute.amazonaws.com:8529')
         db = client.db(dbname, username='nebula', password='nebula')
         return (db)
     

@@ -1,6 +1,6 @@
 {
 	"mongodb": {
-		"host": "localhost",
+		"host": "http://ec2-52-57-66-3.eu-central-1.compute.amazonaws.com",
 		"port": 27017,
 		"user": "sagiv",
 		"passwd": "sagiv",
@@ -37,7 +37,7 @@
 		"execution_mode": "dev"
 	},
 	"redis_db": {
-		"host": "127.0.0.1",
+		"host": "http://ec2-52-57-66-3.eu-central-1.compute.amazonaws.com",
 		"port": 6379
 	},
 	"reid": {

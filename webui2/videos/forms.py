@@ -122,7 +122,8 @@ class VideoSearchForm(forms.Form):
             attrs={
                 'placeholder': 'Search',
                 'style': 'font-size: 0.9rem;',
-                'id': 'search-form-search-input'
+                'id': 'search-form-search-input',
+                'autocomplete': 'off'
             }
         ),
         required=False
