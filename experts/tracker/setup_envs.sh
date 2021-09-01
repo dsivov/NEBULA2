@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DETECTRON_ENV_NAME="engines"
+DETECTRON_ENV_NAME="detectron"
 DETECTRON_DIR="autotracker/detection_models/detectron/"
 
 TFLOW_ENV_NAME="tflow"
@@ -57,7 +57,7 @@ function engines_env {
     conda env remove -n $DETECTRON_ENV_NAME
 
     # install and activate env
-    conda env update -f environment.yaml  # engines env installed with file
+    conda create -n $DETECTRON_ENV_NAME python=3.9 -y
     conda activate $DETECTRON_ENV_NAME
     
     # install core
@@ -119,4 +119,3 @@ engines_env
 tflow_env
 
 popd  # "$(dirname "$0")"
-
