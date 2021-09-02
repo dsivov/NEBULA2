@@ -406,6 +406,7 @@ class VideoSearchView(View):
             for movie in movies:
                 result = get_one_video(movie)
                 result['match'] = movies[movie]['distance']
+                result['graph_history'] = ' -> '.join(result['graph_history'])
                 results.append(result)
 
             number_of_results = len(results)
@@ -425,6 +426,9 @@ class VideoSearchView(View):
         elif searchvalue:
             number_of_results, searchresults = get_video_list(searchvalue, size, page)
             number_of_pages = math.ceil(number_of_results / size)
+
+            for r in searchresults:
+                r['graph_history'] = ' -> '.join(r['graph_history'])
 
             if page > number_of_pages:
                 form = VideoSearchForm(
@@ -704,7 +708,7 @@ class VideoDetailPageView(View):
     
         video = get_one_video(id)
         video['main_tags'] = video['graph_history'][0]
-        video['graph_history'] = video['graph_history'][0] + "->" + video['graph_history'][4] + "->" + video['graph_history'][8] + "..."
+        video['graph_history'] = ' -> '.join(video['graph_history'])
         scenes = get_video_scenes(video)
         context = {
             'video': video,

@@ -349,10 +349,10 @@ class AdditionalSlide{
 
 </script>
 <script>
-const video = JSON.parse('{{ video_json|safe }}');
-const mainVideoID = "{{ id }}";
+const video = JSON.parse(`{{ video_json|safe }}`);
+const mainVideoID = `{{ id }}`;
 const mainVideoStartPosition = {{ position }};
-const scenes = JSON.parse('{{ scenes|safe }}');
+const scenes = JSON.parse(`{{ scenes|safe }}`);
 
 MainVideoManagement.getMainVideoElement().addEventListener('loadeddata', function() {
     // here 'this' is the video element
