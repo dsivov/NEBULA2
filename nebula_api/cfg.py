@@ -1,11 +1,12 @@
 import json
 import os
+from django.conf import settings
 
 
 class Cfg:
     """ class to read the config file, section should be a list  """
     def __init__(self, sections, config_name='config.json'):
-        path = os.environ.get('VIRTUAL_ENV') + '/../../config/' + config_name
+        path = settings.BASE_DIR + '/../config/' + config_name
         self.file = open(path)
         self._val = {}
         self._config = json.load(self.file)

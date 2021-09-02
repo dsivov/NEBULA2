@@ -40,11 +40,7 @@ from .serializers import (
     VideoProcessingMonitorSerializer,
     TemporaryVideoFileSerializer,
 )
-<<<<<<< HEAD
-from .tasks import upload_video_to_s3_async, upload_video_to_server_async
-=======
 from .tasks import upload_video_to_s3_async
->>>>>>> 205dcbef875be86c0ab25769dffa7df9cff6dc91
 from nebula_api.search_api import (
     get_video, get_video_recommendations,
     get_video_moments, get_video_scenes, get_video_list, get_one_video
@@ -403,7 +399,7 @@ class VideoSearchView(View):
                         similar_id, size) or []
             except:
                 movies = []
-            results = []         
+            results = [get_one_video(similar_id)] if similar_id not in movies else []
             for movie in movies:
                 #print("Movie: ", movie)
                 result = get_one_video(movie)
