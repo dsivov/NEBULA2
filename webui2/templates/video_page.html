@@ -367,23 +367,32 @@ class ScenesManipulations{
 
     static next(){
         this.currentIndex += 1;
+
+        if (this.currentIndex >= scenes.length){
+            this.currentIndex = scenes.length - 1;
+        }
         const scene = scenes[this.currentIndex];
         this.setScene(scene);
     }
 
     static prev(){
         this.currentIndex -= 1;
+        if (this.currentIndex < 0){
+            this.currentIndex = 0;
+        }
         const scene = scenes[this.currentIndex];
         this.setScene(scene);
     }
 
     static getPositionFromScene(scene){
-        return scene[0];
+        return scene && scene.length ? scene[0] : null;
     }
 
     static setScene(scene){
         const position = this.getPositionFromScene(scene);
-        MainVideoManagement.runMainVideoAt(position);
+        if (position){
+            MainVideoManagement.runMainVideoAt(position);
+        }
         this.onAfterSetScene();
     }
 
@@ -426,7 +435,9 @@ class ScenesManipulations{
 
         if (this.currentIndex === 0){
             this.disableGoToButton(this.goToPrevSceneElement);
-        } else if (this.currentIndex === scenes.length - 1){
+        }
+
+        if (this.currentIndex >= scenes.length - 1){
             this.disableGoToButton(this.goToNextSceneElement);
         }
     }

@@ -15,6 +15,7 @@ from pathlib import Path
 import random
 import re
 import time
+import urllib.request
 import uuid
 from random import choices
 import string
@@ -40,6 +41,8 @@ from .serializers import (
     VideoProcessingMonitorSerializer,
     TemporaryVideoFileSerializer,
 )
+from nebula_api.cfg import Cfg
+from nebula_api.databaseconnect import DatabaseConnector as dbc
 from .tasks import upload_video_to_s3_async
 from nebula_api.search_api import (
     get_video, get_video_recommendations,
@@ -130,7 +133,12 @@ def create_presigned_url(bucket_name, object_name, expiration=3600):
 
 
 s3_video_filename_pattern = re.compile(r'^media/videos/(?P<filename>[^/]+\.mp4)$')
-s3_resource = boto3.resource('s3')
+s3_resource = boto3.resource(
+    's3',
+    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+    region_name=settings.AWS_S3_REGION_NAME
+)
 bucket = s3_resource.Bucket(settings.AWS_STORAGE_BUCKET_NAME)
 
 
@@ -366,10 +374,7 @@ class VideoSearchView(View):
         similarity_algo = ''
 
         searchresults = []
-        number_of_pages = 1
         number_of_results = 0
-
-        es = Esearch()
 
         if form.is_valid():
             data = form.cleaned_data
@@ -381,16 +386,13 @@ class VideoSearchView(View):
             similar_id = data['SimilarID'] or similar_id
             search_method = data['search_method'] or search_method
             similarity_algo = data['similarity_algo'] or similarity_algo
-            max_results = 500
-            #print("size: ", size, " ", page)
+
         if similar_id:
-            #print("ALGO: ", similarity_algo)
-            #print("Search method: ", search_method)
+            movies = []
             try:
                 if similarity_algo == "clip2bert":
                     movies = embeddings_loader.get_similar_movies(
                         similar_id, size) or []
-                    #print("VIEWS: ", movies)
                 if similarity_algo == "string2clip":
                     movies = strings_embeddings_loader.get_similar_movies(
                         similar_id, size) or []
@@ -398,15 +400,14 @@ class VideoSearchView(View):
                     movies = doc_embeddins_loader.get_similar_movies(
                         similar_id, size) or []
             except:
-                movies = []
+                pass
+
             results = [get_one_video(similar_id)] if similar_id not in movies else []
             for movie in movies:
-                #print("Movie: ", movie)
                 result = get_one_video(movie)
-                #print(movies[movie])
                 result['match'] = movies[movie]['distance']
                 results.append(result)
-            #results = [main_video, *get_random_video_list(50)]
+
             number_of_results = len(results)
             number_of_pages = math.ceil(number_of_results / size)
             if page > number_of_pages:
@@ -418,14 +419,13 @@ class VideoSearchView(View):
                     'similar_id': similar_id
                 })
                 page = number_of_pages
-            start, end = (page - 1) * size, page * size
-            # parsed_results = self._parse_results(results)
-            searchresults = results[start: end]
+            start = (page - 1) * size
+            searchresults = results[start: start + size]
 
         elif searchvalue:
-            results = get_video_list(size, searchvalue)
-            number_of_results = len(results)
+            number_of_results, searchresults = get_video_list(searchvalue, size, page)
             number_of_pages = math.ceil(number_of_results / size)
+
             if page > number_of_pages:
                 form = VideoSearchForm(
                     {
@@ -436,12 +436,6 @@ class VideoSearchView(View):
                     }
                 )
                 page = number_of_pages
-            start, end = (page - 1) * size, page * size
-            #parsed_results = self._parse_results(results)
-            searchresults = self._sort_results(
-                    results,#parsed_results,
-                {'sort_by': sort_by, 'sort_direction': sort_direction}
-            )[start: end]
 
         number_of_pages = math.ceil(number_of_results / size)
         context = {
@@ -511,15 +505,16 @@ class ShowSimilarView(APIView):
 
 
 def video_annotate(request):
-    import urllib.request
-    from nebula_api.cfg import Cfg
     form = VideoAnnotateForm(request.POST or None)
 
     video_url = form.data.get("video_url")
     db_id = form.data.get("db_id")
+
+    if not video_url.startswith('http'):
+        video_url = settings.CURRENT_SERVER_HOST + video_url
+
     local_annotate_video = os.environ.get('VIRTUAL_ENV') + '/annotate/annotate.mp4'
     urllib.request.urlretrieve(video_url, local_annotate_video)
-    from nebula_api.databaseconnect import DatabaseConnector as dbc
     t = dbc()
     db = t.connect_db(settings.DB_NAME)
     movie_coll = db.collection('Movies')
