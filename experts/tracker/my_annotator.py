@@ -58,6 +58,8 @@ def annotate_video(video_path, annotations, output_path, show_pbar=True):
 
 def merge_prediction_to_frame(frame, detections):
     new_frame = copy.deepcopy(frame)
+    height, width, _ = new_frame.shape
+    font_scale = 0.5 * width / 1280 + 0.5 * height / 640
 
     for item_id, item_data in detections.items():
         box = item_data['box']
@@ -65,7 +67,7 @@ def merge_prediction_to_frame(frame, detections):
         cls = item_data['class']
         cv2.rectangle(new_frame, box[:2], box[2:], (0, 0, 255), 2)
         cv2.putText(new_frame, f'{item_id}:{cls}({int(score*100)}%)',
-                    box[:2], cv2.FONT_HERSHEY_COMPLEX, 0.5, (255, 255, 0))
+                    box[:2], cv2.FONT_HERSHEY_COMPLEX, font_scale, (0, 255, 0))
 
     return new_frame
 
