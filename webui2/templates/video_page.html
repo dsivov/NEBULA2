@@ -408,6 +408,9 @@ class ScenesManipulations{
             const scene = scenes[i];
             if (position < scene[0]){
                 break;
+            } else if (position === scene[0] && position === scene[1]){
+                index = i;
+                break;
             } else if (position >= scene[0] && position < scene[1]){
                 index = i;
                 break;
