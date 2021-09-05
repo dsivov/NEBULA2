@@ -34,11 +34,20 @@ OUTPUT_DEFAULT = './annotations'
 
 # ===== Command Constants =====
 # special queue messages for event control
-MODEL_INIT_MSG = 'MODEL INIT'
+STOP_MSG = 'STOP'
 TRACK_COMPLETE_MSG = 'TRACK COMPLETE'
 TRACK_STOPPED_MSG = 'TRACK STOPPED'
 TRACK_FAILED_MSG = 'TRACK FAILED'
-STOP_MSG = 'STOP'
+
+# task message keys
+VIDEO_PATH_KEY = 'video_path'
+IS_REMOTE_KEY = 'is_remote'
+PREDICTION_KEY = 'predictions'
+PRED_EVERY_KEY = 'pred_every'
+DETECTION_BATCH_SIZE_KEY = 'batch_size'
+TRACK_REFRESH_ON_DETECT_KEY = 'refresh_on_detect'
+TRACK_MERGE_IOU_THRESH_KEY = 'merge_iou_thresh'
+TRACK_TRACKER_TYPE_KEY = 'tracker_type'
 
 # cmd-line cli commands
 EXIT_CMD = 'exit'
@@ -48,7 +57,9 @@ VIEW_DETECT_CMD = 'qdetect'
 VIEW_DETECT_PROGRESS_CMD = 'qdetectprog'
 VIEW_TRACK_CMD = 'qtrack'
 VIEW_TRACK_PROGRESS_CMD = 'qtrackprog'
+VIEW_CFG_CMD = 'cfg'
 REMOTE_MOVIE_CMD_PREFIX = 'remote:'
+SET_CFG_CMD_PREFIX = 'set:'
 
 
 # ===== Globals =====
@@ -64,6 +75,13 @@ logger = logging.getLogger('Engine Manager')
 # set global remote comm
 remote = None
 
+# general detection and tracker global defaults
+pred_every_cfg = 10
+detection_batch_size_cfg = 8
+track_refresh_on_detect_cfg = False
+track_merge_iou_thresh_cfg = 0.5
+track_tracker_type_cfg = at.tracking_utils.TRACKER_TYPE_KCF
+
 
 # ===== Public Functions =====
 
@@ -78,7 +96,8 @@ def run_detector(q_in: Queue, q_out: Queue, model):
 
     global exit_all
     global cur_detection_task
-    for video_path in iter(q_in.get, STOP_MSG):
+    for msg in iter(q_in.get, STOP_MSG):
+        video_path = msg[VIDEO_PATH_KEY]
         cur_detection_task = video_path
 
         if video_path.startswith(REMOTE_MOVIE_CMD_PREFIX):
@@ -93,11 +112,24 @@ def run_detector(q_in: Queue, q_out: Queue, model):
 
         logger.info(f'starting detection: {video_path}')
 
+        # wrap queues to have the extend and append functions
+        class QWrap:
+            def __init__(self, q):
+                self.q = q
+            def append(self, item):
+                new_msg = msg.copy()
+                new_msg[PREDICTION_KEY] = item
+                self.q.put(new_msg)
+            def extend(self, items):
+                for item in items:
+                    self.append(item)
+
         try:
             model.predict_video(video_path,
-                                pred_every=10,
+                                batch_size=msg[DETECTION_BATCH_SIZE_KEY],
+                                pred_every=msg[PRED_EVERY_KEY],
                                 show_pbar=False,
-                                global_aggregator=q_out)
+                                global_aggregator=QWrap(q_out))
         except:
             logger.exception(f'An error occurred during detection on {video_path}')
         else:
@@ -128,16 +160,27 @@ def run_trackers(q_in, q_dict, output_style, output_dir):
     global exit_all
     with ThreadPoolExecutor(thread_name_prefix='Tracker') as executor:
         for msg in iter(q_in.get, STOP_MSG):
-            video_path = msg['video_path']
+            video_path = msg[VIDEO_PATH_KEY]
             if video_path not in q_dict:  # handle new video
                 q_dict[video_path] = Queue()
-                op = None if not output_dir else os.path.join(
+                output_path = None if not output_dir else os.path.join(
                     output_dir,
                     os.path.splitext(os.path.basename(video_path))[0] + "__anno"
                 )
-                executor.submit(single_tracker, q_dict[video_path], q_in, video_path, output_style, op)
+                executor.submit(
+                    single_tracker,
+                    q_dict[video_path],
+                    q_in,
+                    video_path,
+                    msg[PRED_EVERY_KEY],
+                    msg[TRACK_MERGE_IOU_THRESH_KEY],
+                    msg[TRACK_TRACKER_TYPE_KEY],
+                    msg[TRACK_REFRESH_ON_DETECT_KEY],
+                    output_style,
+                    output_path
+                )
 
-            pred = msg['pred']
+            pred = msg[PREDICTION_KEY]
 
             # handle "end of tracking" messages from the tracker thread
             if pred == TRACK_COMPLETE_MSG or pred == TRACK_FAILED_MSG or pred == TRACK_STOPPED_MSG:
@@ -160,38 +203,42 @@ def run_trackers(q_in, q_dict, output_style, output_dir):
             q.put(STOP_MSG)
 
 
-def single_tracker(detection_queue, completion_queue, video_path, output_style, output_path):
+def single_tracker(detection_queue, completion_queue, video_path, detect_every,
+                   merge_iou_threshold, tracker_type, refresh_on_detect,
+                   output_style, output_path):
     """
     runner for single thread detection.
     @param; detection_queue: queue to get detection model detections for the given video.
     @param: completion_queue: queue for signalling completion of tracking of the given video.
     @param: video_path: path to the video on which to track objects.
-    @param: output_path: the path in which to save the output annotations. 
+    @param: output_path: the path in which to save the output annotations.
     """
     logger.info(f'start tracking: {video_path}')
     try:
-        track_data = at.tracking_utils.MultiTracker.track_video_objects(video_path=video_path,
-                                                                     detection_model=detection_queue,
-                                                                     detect_every=10,
-                                                                     merge_iou_threshold=0.5,
-                                                                     tracker_type=at.tracking_utils.TRACKER_TYPE_KCF,
-                                                                     refresh_on_detect=False,
-                                                                     show_pbar=False,
-                                                                     logger=logger)
+        track_data = at.tracking_utils.MultiTracker.track_video_objects(
+            video_path=video_path,
+            detection_model=detection_queue,
+            detect_every=detect_every,
+            merge_iou_threshold=merge_iou_threshold,
+            tracker_type=tracker_type,
+            refresh_on_detect=refresh_on_detect,
+            show_pbar=False,
+            logger=logger
+        )
     except at.tracking_utils.EarlyStopException:
         logger.exception(f'Tracking stopped early for: {video_path}')
-        completion_queue.put({'video_path': video_path, 'pred': TRACK_STOPPED_MSG})
+        completion_queue.put({VIDEO_PATH_KEY: video_path, PREDICTION_KEY: TRACK_STOPPED_MSG})
     except:
         logger.exception(f'An error occurred during tracking on {video_path}')
-        completion_queue.put({'video_path': video_path, 'pred': TRACK_FAILED_MSG})
+        completion_queue.put({VIDEO_PATH_KEY: video_path, PREDICTION_KEY: TRACK_FAILED_MSG})
     else:
         try:
             save_output(video_path, track_data, output_style, output_path)
         except:
             logger.exception(f'An error occurred while saving tracking data for {video_path}')
-            completion_queue.put({'video_path': video_path, 'pred': TRACK_FAILED_MSG})
+            completion_queue.put({VIDEO_PATH_KEY: video_path, PREDICTION_KEY: TRACK_FAILED_MSG})
         else:
-            completion_queue.put({'video_path': video_path, 'pred': TRACK_COMPLETE_MSG})
+            completion_queue.put({VIDEO_PATH_KEY: video_path, PREDICTION_KEY: TRACK_COMPLETE_MSG})
 
 
 def save_output(video_path, data, output_style, output_path=None):
@@ -215,8 +262,9 @@ def save_output(video_path, data, output_style, output_path=None):
         logger.info(f'successfully saved {nodes_saved} DB entries for {video_path}')
 
 
-def main(q_detector_in: Queue, q_detector_out: Queue, q_dict_trackers: dict, output_style: str, output_dir: str = None,
-         model_cfg='CFG_OID_V4_DETECTION_FerRCNN_INCEPTION_V2', model_confidence=0.3, log_file=None):
+def main(q_detector_in: Queue, q_detector_out: Queue, q_dict_trackers: dict, output_style: str,
+         output_dir: str = None, model_cfg='CFG_OID_V4_DETECTION_FerRCNN_INCEPTION_V2', model_confidence=0.3,
+         input_batch_size=8, detector_pred_every=10, log_file=None):
     """
     launches all engines.
     @param: q_detector_in: a queue for tasks for the detector.
@@ -226,7 +274,8 @@ def main(q_detector_in: Queue, q_detector_out: Queue, q_dict_trackers: dict, out
     @param: model_backend: 'tflow' or 'detectron'.
     @param: model_cfg: the name of the CFG constant in the backend utilities file.
     @param: log_file: where to save logged information. see `setup_logger` for more info.
-    @return: a tuple of Thread object (t1, t2) where t1 belongs to the detector and t2 belongs to the trackers dispatcher
+    @return: a tuple of Thread object (t1, t2) where t1 belongs to the detector and t2 belongs to the trackers
+             dispatcher
     """
 
     __setup_logger(log_file)
@@ -305,6 +354,27 @@ def cmd_line_app(q_detector_in: Queue, q_detector_to_tracker: Queue, q_dict_trac
             logger.info('Tracking queue: ' + str(list(q_detector_to_tracker.queue)))
             print('Tracking in progress:', list(q_dict_trackers.keys()))
             logger.info('Tracking in progress: ' + str(list(q_dict_trackers.keys())))
+        
+        elif line == VIEW_CFG_CMD:  # show current configurations
+            print('pred every:', pred_every_cfg)
+            logger.info('pred every: ' + str(pred_every_cfg))
+            print('batch size:', detection_batch_size_cfg)
+            logger.info('batch size: ' + str(detection_batch_size_cfg))
+            print('merge iou thresh:', track_merge_iou_thresh_cfg)
+            logger.info('merge iou thresh: ' + str(track_merge_iou_thresh_cfg))
+            print('tracker type:', track_tracker_type_cfg)
+            logger.info('tracker type: ' + str(track_tracker_type_cfg))
+            print('refresh on detect:', track_refresh_on_detect_cfg)
+            logger.info('refresh on detect: ' + str(track_refresh_on_detect_cfg))
+        
+        elif line.startswith(SET_CFG_CMD_PREFIX):
+            line = line[len(SET_CFG_CMD_PREFIX):].strip()
+            try:
+                __set_cfg_cmd(line)
+            except:
+                logger.exception(f'bad cfg set command: "{line}"')
+            else:
+                logger.info('cfg set')
 
         elif line == VIEW_DETECT_CMD:  # show detection queue
             print(list(q_detector_in.queue))
@@ -324,7 +394,7 @@ def cmd_line_app(q_detector_in: Queue, q_detector_to_tracker: Queue, q_dict_trac
 
         # send movie file/dir/remote path to detection queue
         elif os.path.exists(line) or line.startswith(REMOTE_MOVIE_CMD_PREFIX):
-            q_detector_in.put(line)
+            q_detector_in.put(__get_video_msg(line))
 
         elif not line:  # skip empty string
             pass
@@ -484,6 +554,52 @@ def __handle_args_defaults(parsed_args):
         print('Warning: output style "arango" does not save locally and will not save output to given path: {parsed_args.output_dir}')
     
     return parsed_args
+
+
+def __set_cfg_cmd(cfg_line):
+    cfg_name, value = cfg_line.split('=')
+    if cfg_name == PRED_EVERY_KEY:
+        v = int(value)
+        assert v > 0
+        global pred_every_cfg
+        pred_every_cfg = v
+    elif cfg_name == DETECTION_BATCH_SIZE_KEY:
+        v = int(value)
+        assert v > 0
+        global detection_batch_size_cfg
+        detection_batch_size_cfg = v
+    elif cfg_name == TRACK_TRACKER_TYPE_KEY:
+        v = getattr(at.tracking_utils, f'TRACKER_TYPE_{value}')
+        global track_tracker_type_cfg
+        track_tracker_type_cfg = v
+    elif cfg_name == TRACK_MERGE_IOU_THRESH_KEY:
+        v = float(value)
+        assert 0 < v <= 1
+        global track_merge_iou_thresh_cfg
+        track_merge_iou_thresh_cfg = v
+    elif cfg_name == TRACK_REFRESH_ON_DETECT_KEY:
+        v = eval(value)
+        assert isinstance(v, bool)
+        global track_refresh_on_detect_cfg
+        track_refresh_on_detect_cfg =v
+
+
+def __get_video_msg(video_path):
+    if video_path.startswith(REMOTE_MOVIE_CMD_PREFIX):
+        is_remote = True
+        video_path = video_path[len(REMOTE_MOVIE_CMD_PREFIX):].strip()
+    else:
+        is_remote = False
+    
+    return {
+        VIDEO_PATH_KEY: video_path,
+        IS_REMOTE_KEY: is_remote,
+        PRED_EVERY_KEY: pred_every_cfg,
+        DETECTION_BATCH_SIZE_KEY: detection_batch_size_cfg,
+        TRACK_REFRESH_ON_DETECT_KEY: track_refresh_on_detect_cfg,
+        TRACK_MERGE_IOU_THRESH_KEY: track_merge_iou_thresh_cfg,
+        TRACK_TRACKER_TYPE_KEY: track_tracker_type_cfg
+    }
 
 
 # ===== Main Code =====

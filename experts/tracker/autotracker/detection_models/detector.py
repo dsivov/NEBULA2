@@ -75,17 +75,6 @@ class PretrainedVideoPredictor(ABC):
 
         # save predictions in global aggregator if provided
         if global_aggregator is not None:
-            if isinstance(global_aggregator, Queue):  # wrap queues to have the extend and append functions
-                class QWrap:
-                    def __init__(self, q):
-                        self.q = q
-                    def append(self, item):
-                        self.q.put({'video_path': path_to_video, 'pred': item})
-                    def extend(self, items):
-                        for item in items:
-                            self.append(item)
-                    
-                global_aggregator = QWrap(global_aggregator)
             preds = global_aggregator
         else:
             preds = []
