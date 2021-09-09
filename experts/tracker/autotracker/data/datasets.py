@@ -10,10 +10,11 @@ from PIL import Image
 
 
 class DetectionDataset(ABC):
-    def __init__(self, frames_path, get_every=1):
+    def __init__(self, frames_path, get_every=1, resize=None):
         self.frames_dir = frames_path
         self.get_every = get_every
         self.num_frames = self.initialize_frames()
+        self.resize = resize
     
     @abstractmethod
     def initialize_frames(self):
@@ -38,6 +39,8 @@ class VideoDataset(DetectionDataset):
             self.video.set(cv2.CAP_PROP_POS_FRAMES,(gen_count*self.get_every))
             success, frame = self.video.read()
             if success:
+                if self.resize:
+                    frame = cv2.resize(frame, self.resize, interpolation=cv2.INTER_CUBIC)
                 yield frame
             else:
                 break
@@ -60,4 +63,6 @@ class FramesDataset(DetectionDataset):
     def __iter__(self):
         for i in range(0, self.num_frames, self.get_every):
             img = Image.open(os.path.join(self.frames_dir, self.frames[i]))
+            if self.resize:
+                img = img.resize(self.resize, resample=Image.BICUBIC)
             yield np.array(img)[:, :, ::-1]

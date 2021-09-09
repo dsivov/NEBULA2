@@ -43,6 +43,7 @@ class PretrainedVideoPredictor(ABC):
                       path_to_video,
                       batch_size=8,
                       pred_every=1,
+                      resize=None,
                       show_pbar=True,
                       global_aggregator=None):
         """
@@ -69,9 +70,9 @@ class PretrainedVideoPredictor(ABC):
         """
         # load dataset
         if os.path.isdir(path_to_video):
-            ds = FramesDataset(path_to_video, get_every=pred_every)
+            ds = FramesDataset(path_to_video, get_every=pred_every, resize=resize)
         else:
-            ds = VideoDataset(path_to_video, get_every=pred_every)
+            ds = VideoDataset(path_to_video, get_every=pred_every, resize=resize)
 
         # save predictions in global aggregator if provided
         if global_aggregator is not None:
