@@ -12,42 +12,49 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 
 import os
 import sys
-sys.path.append(os.environ['VIRTUAL_ENV'] + '/../../src/')
-from common.cfg import Cfg
-from monitor.monitor_api import MonitorApi
-from embeddings.nebula_embeddings_api import EmbeddingsLoader
-# Build paths inside the project like this: os.path.join(BASE_DIR, ...)
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(BASE_DIR + '/../')
+
+from nebula_api.cfg import Cfg
+#from monitor.monitor_api import MonitorApi
+from nebula_api.nebula_embeddings_api import EmbeddingsLoader
+# Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'lh%%*c_r!^n0mkl^+j1=t76l4i(h_#3&i&zl=mnxu1(n!b$rwa'
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [ 'ec2-52-57-66-3.eu-central-1.compute.amazonaws.com', 'ec2-18-191-215-72.us-east-2.compute.amazonaws.com','ec2-3-120-98-139.eu-central-1.compute.amazonaws.com','localhost']
+ALLOWED_HOSTS = [
+    'ec2-52-57-66-3.eu-central-1.compute.amazonaws.com',
+    'ec2-18-191-215-72.us-east-2.compute.amazonaws.com',
+    'ec2-3-120-98-139.eu-central-1.compute.amazonaws.com',
+    'localhost'
+]
 #S3
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 #STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
 # Used to authenticate with S3
-AWS_ACCESS_KEY_ID = 'AKIA6CGKI2WG4SIQZ5NX'
-AWS_SECRET_ACCESS_KEY = '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'
+AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
 
 # Configure which endpoint to send files to, and retrieve files from.
 AWS_STORAGE_BUCKET_NAME = 'webui-static'
 AWS_S3_REGION_NAME = 'us-east-2'
-AWS_S3_CUSTOM_DOMAIN = '%s.%s.s3.amazonaws.com' % (AWS_STORAGE_BUCKET_NAME,AWS_S3_REGION_NAME)
+AWS_S3_CUSTOM_DOMAIN = '%s.%s.s3.amazonaws.com' % (AWS_STORAGE_BUCKET_NAME, AWS_S3_REGION_NAME)
 #AWS_STATIC_LOCATION = 'static'
 AWS_MEDIA_LOCATION = 'media'
 # General optimization for faster delivery
 AWS_IS_GZIPPED = True
 AWS_S3_OBJECT_PARAMETERS = {
-        'CacheControl': 'max-age=86400',
+    'CacheControl': 'max-age=86400',
 }
 AWS_DEFAULT_ACL = None
 
@@ -60,13 +67,13 @@ LOGGING = {
             'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
             'style': '{',
         },
-        'simple' :{
+        'simple': {
             'format': '{levelname} {message}',
             'style': '{',
         },
     },
     'handlers': {
-        'console':{
+        'console': {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
@@ -74,7 +81,7 @@ LOGGING = {
         'file': {
             'level': 'DEBUG',
             'class': 'logging.handlers.RotatingFileHandler',
-            'filename': os.getenv('VIRTUAL_ENV') + '/log/webserver.log',
+            'filename': BASE_DIR + '/../logs/webserver.log',
             'maxBytes': 1024 * 1024 * 5,
             'backupCount': 5,
             'formatter': 'verbose',
@@ -207,7 +214,7 @@ MEDIA_URL = 'https://%s/%s/videos/' % (AWS_S3_CUSTOM_DOMAIN, AWS_MEDIA_LOCATION)
 VTAG_CHANNEL = Cfg(['kfchannel']).get('kfchannel', 'vtag')
 MONITOR_CHANNEL = Cfg(['kfchannel']).get('kfchannel','monitor')
 DB_NAME = Cfg(['graphdb']).get('graphdb','name')
-mon_api = MonitorApi()
+#mon_api = MonitorApi()
 #em_loader = EmbeddingsLoader()
 MAX_SEARCH_RESULTS = 1000000
 STEP_SEARCH_RESULTS = 1000

@@ -1,0 +1,12 @@
+
+
+detectron2 is used
+
+1. conda activate engines
+2. cd detectron
+3. install prerequisites:
+    $ python -m pip install "torch>=1.7.0" "torchvision>=0.8.1" "opencv-python>=4.1.2"
+3. follow instructions from https://detectron2.readthedocs.io/en/latest/tutorials/install.html
+    $ git clone https://github.com/facebookresearch/detectron2.git
+    $ python -m pip install -e detectron2
+

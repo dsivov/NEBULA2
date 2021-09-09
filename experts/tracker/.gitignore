@@ -1,0 +1,6 @@
+__pycache__/
+*.log
+*.jpg
+*.avi
+*.mp4
+*__anno.*

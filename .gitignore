@@ -130,3 +130,6 @@ dmypy.json
 *.dat
 *.bin
 oldgit
+.idea
+__pycache__/
+logs/

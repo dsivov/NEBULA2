@@ -12,7 +12,11 @@ logger = logging.getLogger('nebweb')
 
 class Esearch:
     def __init__(self):
+<<<<<<< HEAD
         config_file = os.environ['PYTHONPATH'].split(os.pathsep)[0] + '/config/config.json'
+=======
+        config_file = settings.BASE_DIR + '/../config/config.json'
+>>>>>>> f91e049b6e9f60c52b2e90391ae6a825d10c0a17
 
         jf = open(config_file)
         cfg = json.load(jf)['esdb']

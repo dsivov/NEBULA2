@@ -1,0 +1,3 @@
+detection_models/detectron/detectron2/
+detection_models/tflow/models/
+detection_models/tflow/protoc_3.3/
