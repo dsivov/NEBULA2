@@ -6,7 +6,6 @@ import sys
 
 from datetime import datetime
 from queue import Queue
-from importlib import import_module
 from threading import Thread
 from concurrent.futures import ThreadPoolExecutor
 from collections import defaultdict
@@ -264,7 +263,7 @@ def save_output(video_path, data, output_style, output_path=None):
 
 def main(q_detector_in: Queue, q_detector_out: Queue, q_dict_trackers: dict, output_style: str,
          output_dir: str = None, model_cfg='CFG_OID_V4_DETECTION_FerRCNN_INCEPTION_V2', model_confidence=0.3,
-         input_batch_size=8, detector_pred_every=10, log_file=None):
+         log_file=None):
     """
     launches all engines.
     @param: q_detector_in: a queue for tasks for the detector.
@@ -300,14 +299,14 @@ def main(q_detector_in: Queue, q_detector_out: Queue, q_dict_trackers: dict, out
     return t_detector, t_trackers
 
 
-def arango_app(q_detector_in: Queue, q_detector_to_tracker, q_dict_trackers):
+def arango_app(q_detector_in: Queue):
     remote = __get_remote()
     logger.info('Arango client ready')
 
     logger.info('ready to receive remote commands')
     for movie_id in remote.scheduler_loop():
         logger.info(f'got movie from scheduler: {movie_id}')
-        q_detector_in.put(f'{REMOTE_MOVIE_CMD_PREFIX} {movie_id}')
+        q_detector_in.put(__get_video_msg(f'{REMOTE_MOVIE_CMD_PREFIX} {movie_id}'))
 
 
 def cmd_line_app(q_detector_in: Queue, q_detector_to_tracker: Queue, q_dict_trackers: dict):
@@ -421,15 +420,16 @@ def parse_args():
                         help='Detection model configuration. Should be '
                              'one of the CFG constants in the chosen model utils.')
     parser.add_argument('--confidence', '-c',
-                        default=0.3,
+                        default=0.6,
                         type=float,
                         help='path to output log file')
     parser.add_argument('--log', '-l',
                         default=None,
                         help='path to output log file')
-    parser.add_argument('--cli',
-                        action='store_true',
-                        default=False,
+    parser.add_argument('--no-arango',
+                        action='store_false',
+                        dest='arango',
+                        default=True,
                         help='use command line client with local movies')
     parser.add_argument('--output-style', '-o',
                         nargs="+",
@@ -534,11 +534,11 @@ def __handle_args_defaults(parsed_args):
     # === Output Defaults ===
     # default output to arango without local save
     if not parsed_args.output_style and not parsed_args.output_dir:
-        if parsed_args.cli:
+        if parsed_args.arango:
+            parsed_args.output_style = [OUTPUT_STYLE_ARANGO]
+        else:
             parsed_args.output_style =  [OUTPUT_STYLE_JSON]
             parsed_args.output_dir = OUTPUT_DEFAULT
-        else:
-            parsed_args.output_style = [OUTPUT_STYLE_ARANGO]
 
     # got local output save location. save as JSON
     elif not parsed_args.output_style:
@@ -569,7 +569,7 @@ def __set_cfg_cmd(cfg_line):
         global detection_batch_size_cfg
         detection_batch_size_cfg = v
     elif cfg_name == TRACK_TRACKER_TYPE_KEY:
-        v = getattr(at.tracking_utils, f'TRACKER_TYPE_{value}')
+        v = getattr(at.tracking_utils, f'TRACKER_TYPE_{value.upper()}')
         global track_tracker_type_cfg
         track_tracker_type_cfg = v
     elif cfg_name == TRACK_MERGE_IOU_THRESH_KEY:
@@ -622,15 +622,17 @@ if __name__ == "__main__":
                                     model_confidence=args.confidence,
                                     log_file=args.log)
 
-    if args.cli:
-        cmd_line_app(q_detector_in=detector_q_in,
-                     q_detector_to_tracker=detector_to_tracer_q,
-                     q_dict_trackers=trackers_q_dict)
+    if args.arango:
+        scheduler_thread = Thread(target=arango_app,
+                                  args=(detector_q_in,))
+        scheduler_thread.name = 'Scheduler'
+        scheduler_thread.daemon = True  # set up as daemon so that it will quit when the program terminates.
+        scheduler_thread.start()
+        print('scheduler is running')
 
-    else:
-        arango_app(q_detector_in=detector_q_in,
-                   q_detector_to_tracker=detector_to_tracer_q,
-                   q_dict_trackers=trackers_q_dict)
+    cmd_line_app(q_detector_in=detector_q_in,
+                 q_detector_to_tracker=detector_to_tracer_q,
+                 q_dict_trackers=trackers_q_dict)
 
     # wait for threads to close
     det_thread.join()
