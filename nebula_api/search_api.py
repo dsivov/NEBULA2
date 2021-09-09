@@ -21,10 +21,10 @@ def get_video(id):
         'match': "%.2f" % (random() * 0.5 + 0.5)
     }
 
-def get_video_es(query):
+def get_video_es(query, lenght):
     #print("DB_ID: ", query)
     es = Esearch()
-    results = es.get_results_doc(query)
+    results = es.get_results_doc(query, lenght)
     
     docs = []
     for result in results: 
@@ -97,10 +97,10 @@ def get_random_video_list(length):
     ], key=operator.itemgetter('name')), key=operator.itemgetter('match'), reverse=True))
 
 def get_video_list(length, query):
-    return list(get_video_es(query))
+    return list(get_video_es(query, length))
 
 def get_one_video(query):
-    return get_video_es(query)[0]
+    return get_video_es(query, 1)[0]
 
 def get_video_recommendations(id, position, search_engine):
     print("Video Recommendations: ",id, " ", position)
