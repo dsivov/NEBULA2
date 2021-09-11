@@ -8,7 +8,7 @@ import cv2 as cv
 import itertools
 import copy
 
-from nebula_api.milvus_api import MilvusAPI
+from milvus_api.milvus_api import MilvusAPI
 from milvus import Milvus
 
 
@@ -121,6 +121,11 @@ class NebulaVideoEvaluation:
             ret, frame = cap.read()
 
         return embedding_array
+
+
+    def encode_text(self, text):
+        text_token = torch.cat([clip.tokenize(text)]).to('cpu')
+        return self.model.encode_text(text_token).detach().numpy()
 
 
     def create_clip_representation(self, movie_name, thresholds, start_time=-1, end_time=10000000, method='median') -> list:
