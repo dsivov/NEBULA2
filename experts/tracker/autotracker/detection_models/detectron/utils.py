@@ -71,14 +71,6 @@ class VideoPredictor(PretrainedVideoPredictor):
         self.cpu_device = torch.device("cpu")
     
     def load_model(self):
-        """
-        Get a detectron2 model based on the given configuration.
-        @param: config_str: the name of a model config file. use CFG_ constants.
-        @param: confidence_threshold: only save predictions with a confidence score above this threshold.
-        @param: device: the inference device (CPU or GPU)
-        @return: a tuple (predictor, cfg) where `predictor` is the actual torchvision model and `cfg` is the
-                 configuration object matching the given configuration string.
-        """
         # create cfg for model
         cfg = get_cfg()
         cfg.merge_from_file(model_zoo.get_config_file(self.model_cfg))
@@ -90,20 +82,26 @@ class VideoPredictor(PretrainedVideoPredictor):
         # load model
         model = DefaultPredictor(cfg).model
 
-        # create metadata object and get label map
+        # get label map from dataset metadata
         label_map = MetadataCatalog.get(cfg.DATASETS.TEST[0] if len(cfg.DATASETS.TEST) else "__unused").thing_classes
 
         return model, label_map
 
     def predict_batch(self, image_batch: np.ndarray):
+        # convert batch to tensor object. reshape to (batch_size, C, H, W), which is the required format
+        # for detectron.
         image_batch_torch = torch.as_tensor(image_batch.astype("float32").transpose(0, 3, 1, 2)).to(self.device)
-        height, width = image_batch_torch.shape[2:]
+        height, width = image_batch_torch.shape[2:]  # save height and width for output format
 
+        # change image batch to a list of dictionaries for detectron input format.
         image_batch_formatted = []
         for img in image_batch_torch:
             image_batch_formatted.append({'image': img, 'width': width, 'height': height})
 
+        # perform predictions
         preds = self.model(image_batch_formatted)
+
+        # format output for uniform output style
         for i, p in enumerate(preds):
             # immediately move instances to CPU to avoid GPU OOM error.
             new_p = {'instances': p['instances'].to(self.cpu_device)}
