@@ -51,7 +51,7 @@ class Esearch:
 
         return results
     
-    def get_results_doc(self, qin, thr=0.01):
+    def get_results_doc(self, qin,  length=10, thr=0.01):
         results = []
         #step = settings.STEP_SEARCH_RESULTS
         #number_of_steps = settings.MAX_SEARCH_RESULTS // step
@@ -62,7 +62,7 @@ class Esearch:
                 fields=["doc.description", "doc.movie_name", "doc.db_id"],
                 default_operator='and'
             )
-        ).extra(min_score=thr)
+        ).extra(min_score=thr, from_= 0, size = length)
         s = s.highlight_options(order='score')
         for hit in s.execute():
             if hit.doc.db_id not in results:
