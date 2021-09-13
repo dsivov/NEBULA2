@@ -464,36 +464,47 @@ def parse_args():
     """
     parse program arguments
     """
-    parser = argparse.ArgumentParser(description='Run ojbect detection and tracking engines.')
+    parser = argparse.ArgumentParser(description='Run ojbect detection and tracking engines. For more '
+                                                 'detailed instructions see '
+                                                 'NEBULA2/experts/tracker/instructions.txt')
     parser.add_argument('--backend', '-b',
                         default=None,
-                        help='Detection model backend',
+                        help='Detection model backend. If not provided, any available backend may be '
+                             'used. If a model configuration is provided via the --model argument, then '
+                             'a backend that has that configuration will be used, if one is available.',
                         choices=[at.BACKEND_TFLOW, at.BACKEND_DETECTRON])
     parser.add_argument('--model', '-m',
                         default=None,
-                        help='Detection model configuration. Should be '
-                             'one of the CFG constants in the chosen model utils.')
+                        help='Detection model configuration. Should be one of the CFG constants in the '
+                             'chosen model backend. If not provided, a default configuration for the '
+                             'backend is used.')
     parser.add_argument('--confidence', '-c',
                         default=0.6,
                         type=float,
-                        help='path to output log file')
+                        help='The model prediction confidence threshold (default is 0.6).')
     parser.add_argument('--log', '-l',
                         default=None,
-                        help='path to output log file')
+                        help='path to output log file. If an existing directory is given, then the log '
+                             'file name will be a default name "YYY-MM-dd_HH:mm:ss.log". If not provided, '
+                             'the default filename is used in the current working directory.')
     parser.add_argument('--no-arango',
                         action='store_false',
                         dest='arango',
                         default=True,
-                        help='use command line client with local movies')
+                        help='Adding this flag disables the arango client scheduler daemon.')
     parser.add_argument('--output-style', '-o',
                         nargs="+",
                         default=None,
                         choices=[OUTPUT_STYLE_JSON, OUTPUT_STYLE_ANNO, OUTPUT_STYLE_ARANGO],
-                        help='The method for saving the tracking output')
+                        help='The method for saving the tracking output. If "json" or "anno" are set, '
+                             'the output is redirected to the location of the --output-dir argument. The'
+                             'default is "arango" if the --no-arango flag is NOT set, or "json" otherwise.')
     parser.add_argument('--output-dir', '-d',
                         default=None,
-                        help='For use only when --output-style "json" or "anno" are set. Indicates wher to save '
-                             'the annotations.')
+                        help='For use only when --output-style "json" or "anno" are set. Indicates wher to '
+                             'save the annotations. If "json" or "anno" are set but no --output-dir is '
+                             'provided, a directory called "annotations/" is created in the current working '
+                             'directory.')
 
     # parse then set defaults
     parsed_args = parser.parse_args()
