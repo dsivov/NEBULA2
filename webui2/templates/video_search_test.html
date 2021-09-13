@@ -273,7 +273,7 @@
                     <div class="video-db-id">{{ video.db_id }}</div>
                     <div class="d-flex flex-wrap m-1">
 						<a
-                            href="{% url 'export-graph-db-png' %}?db_id={{ video.db_id }}"
+                            href="{% get_arangodb_graph_view_url video.db_id %}"
 							class="btn btn-dark m-1 little_font_column"
                             target="_blank"
                         >
@@ -426,7 +426,7 @@
                 <div class="video-db-id">${video_data.db_id}</div>
                 <div class="d-flex flex-wrap m-1">
                     <a
-                        href="{% url 'export-graph-db-png' %}?db_id=${video_data.db_id}"
+                        href="{% get_arangodb_graph_view_path %}&nodeStart=${video_data.db_id}"
                         class="btn btn-dark m-1"
                         target="_blank"
                     >
@@ -748,7 +748,7 @@
                 <div class="video-db-id">${video_data.db_id}</div>
                 <div class="d-flex flex-wrap m-1">
                     <a
-                        href="{% url 'export-graph-db-png' %}?db_id=${video_data.db_id}"
+                        href="{% get_arangodb_graph_view_path %}&nodeStart=${video_data.db_id}"
                         class="btn btn-dark m-1"
                         target="_blank"
                     >
@@ -877,6 +877,24 @@
            $('#search-form-submit-btn').click();
        }
     });
+
+    const pageInputElement = document.getElementById('search-form-page-input')
+    if (pageInputElement) {
+        pageInputElement.addEventListener(
+            'input', event => {
+                const valStr = event.target.value;
+                const val = parseInt(valStr);
+                if (isNaN(val)) {
+                    return;
+                }
+                if (val < 1) {
+                    event.target.value = 1;
+                } else if (val > {{number_of_pages}}) {
+                    event.target.value = {{number_of_pages}};
+                }
+            }
+        );
+    }
 
     startUp();
 </script>

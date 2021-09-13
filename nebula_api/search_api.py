@@ -21,32 +21,36 @@ def get_video(id):
         'match': "%.2f" % (random() * 0.5 + 0.5)
     }
 
-def get_video_es(query, lenght):
-    #print("DB_ID: ", query)
-    es = Esearch()
-    results = es.get_results_doc(query, lenght)
+
+def get_video_es(query, page_size=5, page=1):
+    from_index = (page - 1) * page_size
+    to_index = from_index + page_size
+
+    count, results = Esearch().get_results_doc(query, from_index, to_index)
     
     docs = []
     for result in results: 
         main_tags = []
-        for tag in result.main_tags:
-            if tag not in main_tags:
-                main_tags.append(tag)
         scenes_elements = []
         scenes = []
         story = []
-        import json
+
+        for tag in result.main_tags:
+            if tag not in main_tags:
+                main_tags.append(tag)
+
         for scene_element in result.scene_elements:
-            #print(type(scene))
             scenes_elements.append(list(scene_element))
+
         for scene in result.scenes:
-            #print(type(scene))
             scenes.append(list(scene))
+
         for sentece in result.story:
             story.append(sentece)
-        doc = {
+
+        docs.append({
             'name': result.movie_name,
-            'slice_name': result.movie_name +".avi",
+            'slice_name': result.movie_name + ".avi",
             'url': result.url,
             'timestamp': '',
             'db_id': result.db_id,
@@ -58,9 +62,9 @@ def get_video_es(query, lenght):
             'scenes': scenes,
             'metadata': 'Nebula Hollywood movie',
             'match': result['score']
-        }
-        docs.append(doc)
-    return(docs)    
+        })
+    return count, docs
+
 
 def get_video_moments(id, txt, search_engine):
     print("Video Moments: ", id , " ", txt)
@@ -96,11 +100,15 @@ def get_random_video_list(length):
         ) for _ in range(length)
     ], key=operator.itemgetter('name')), key=operator.itemgetter('match'), reverse=True))
 
-def get_video_list(length, query):
-    return list(get_video_es(query, length))
+
+def get_video_list(query, page_size, page):
+    # Returns count, results
+    return get_video_es(query, page_size, page)
+
 
 def get_one_video(query):
-    return get_video_es(query, 1)[0]
+    count, res = get_video_es(query)
+    return res[0]
 
 def get_video_recommendations(id, position, search_engine):
     print("Video Recommendations: ",id, " ", position)
