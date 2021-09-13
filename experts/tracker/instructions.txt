@@ -9,17 +9,26 @@ use engines manager
     2.1 for tensorflow models: conda activate tflow
     2.2 for detectron2 models: conda activate engines
 3. run engine manager
-    3.1. tensorflow models:
-        $ python engine_mgr.py 2> mgr_err.txt  # recommended redirecting error text
-    3.2. detectron models:
-        $ python engine_mgr.py --backend detectron 2> mgr_err.txt  # recommended redirecting error text
-    3.3. additional command line arguments can be found in `parse_args` function of engine_mg.py. Defaults
-         set in `get_detection_model` function.
-4. command line client API
-    4.1. path to movie - start detection and tracking on video file
-        4.1.1. example: /movies/scenecliptest00123.avi
-    4.2. qdetect - print detection queue
-    4.3. qtrack - print waiting tracker tasks
-    4.4. qtrackprog = print tracking tasks in progress
-    4.5. wait - wait for all to tasks to finish and exit
-    4.6. exit - wait for current tasks to finish and exit
+    3.1. use --help to see command line arguments.
+4. command line client API:
+    Once the model is loaded, the scheduler is automatically running. When "Actors" is less than "ClipScene"
+    in arango, then the schduler will receive movie ID's as tasks for tracking, which will be saved in your
+    preferred output style. There is will alos be a prompt ">>>" for user input. acceptable commands are the
+    following:
+        4.1. path to movie - start detection and tracking on video file / frames directory
+            4.1.1. example: "/movies/scenecliptest00123.avi"
+        4.2. path to remote movie with "remote:" prefix - start detection and tracking on remote movie
+            4.2.1. example: "remote: Movies/92357362"
+        4.3. qdetect - print detection queue
+        4.4. qdetectprog - print detection task in progress
+        4.4. qtrack - print waiting tracker tasks
+        4.5. qtrackprog - print tracking tasks in progress
+        4.6. status - print all queues info
+        4.7. cfg - print all tracking and detection configurations.
+        4.8. set: <cfg_key>=<new_value> - set new value for specific configuration
+            4.8.1. example: "set: batch_size=2" (will set the detection batch size to 2)
+            4.8.2. configuration changes will only affect new tasks added after the configurations have been
+                   changed. older tasks will use the configurations that were in place when the task was
+                   added to the queue.
+        4.9. wait - wait for all to tasks to finish and exit
+        4.10. exit - wait for current tasks to finish and exit

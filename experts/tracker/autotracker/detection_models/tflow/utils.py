@@ -54,13 +54,10 @@ class VideoPredictor(PretrainedVideoPredictor):
     def __init__(self,
                  pretrained_model_cfg=CFG_OID_V4_DETECTION_FerRCNN_INCEPTION_V2,
                  confidence_threshold=0.5):
+        # override init to set default pretrained model cfg.
         super().__init__(pretrained_model_cfg, confidence_threshold)
 
     def load_model(self):
-        """
-        load a model with pretrained weights and accompanying label map.
-        @return: a tuple (model, label_map)
-        """
         # load label map
         path_to_label_map = os.path.join(LABEL_MAPS_DIR, MODEL_TO_DATASET_MAP[self.model_cfg])
         label_map = label_map_util.create_category_index_from_labelmap(path_to_label_map,
@@ -87,13 +84,10 @@ class VideoPredictor(PretrainedVideoPredictor):
         return model, label_map
 
     def predict_batch(self, image_batch: np.ndarray):
-        """
-        Perform prediciton on a batch of images.
-        @param: image_batch: a numpy array of shape (batch_size, H, W, C)
-        """
-        assert image_batch.ndim == 4, 'must be batch of RGB images'
+        # get image batch dims
         batch_size, height, width = image_batch.shape[:3]
 
+        # convert to tensorflow tensor object
         input_tensor = tf.convert_to_tensor(image_batch)
 
         # Run inference
@@ -109,9 +103,6 @@ class VideoPredictor(PretrainedVideoPredictor):
                              for i in range(batch_size)]
                         for key,value in output_dict.items()}
         
-        # output_dict = {key: value.numpy()
-        #                for key,value in output_dict.items()}
-
         output_dict['num_detections'] = num_detections
 
         # detection_classes should be ints.

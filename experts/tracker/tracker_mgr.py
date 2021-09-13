@@ -77,7 +77,7 @@ remote = None
 # general detection and tracker global defaults
 pred_every_cfg = 10
 detection_batch_size_cfg = 8
-track_refresh_on_detect_cfg = False
+track_refresh_on_detect_cfg = True
 track_merge_iou_thresh_cfg = 0.5
 track_tracker_type_cfg = at.tracking_utils.TRACKER_TYPE_KCF
 
@@ -93,49 +93,62 @@ def run_detector(q_in: Queue, q_out: Queue, model):
     """
     logger.info('detection thread ready for input')
 
-    global exit_all
-    global cur_detection_task
+    # global indicators
+    global exit_all  # exit sequence flag
+    global cur_detection_task  # current video in detection
+
+    # iterate until STOP message
     for msg in iter(q_in.get, STOP_MSG):
+        # set current video path
         video_path = msg[VIDEO_PATH_KEY]
         cur_detection_task = video_path
 
-        if video_path.startswith(REMOTE_MOVIE_CMD_PREFIX):
-            video_path = video_path[len(REMOTE_MOVIE_CMD_PREFIX):].strip()
-            
+        # download if necessary
+        if msg[IS_REMOTE_KEY]:
             # download frames or continue if it does not exist
             logger.info(f'downloading remote movie: {video_path}')
-            num_frames = __get_remote().download_arango_by_id(video_path)
+            num_frames = __get_remote().downloadDirectoryFroms3(video_path)
             if num_frames == 0:
                 logger.error(f'no frames found under the name {video_path}')
+                cur_detection_task = None  # if no frames are found, empty current task indicator
                 continue
 
         logger.info(f'starting detection: {video_path}')
 
-        # wrap queues to have the extend and append functions
+        # wrap queues to have the extend and append functions.
+        # we save in the same message but template but add predicitons
         class QWrap:
             def __init__(self, q):
                 self.q = q
+
             def append(self, item):
-                new_msg = msg.copy()
-                new_msg[PREDICTION_KEY] = item
-                self.q.put(new_msg)
+                new_msg = msg.copy()  # copy original message
+                new_msg[PREDICTION_KEY] = item  # add prediciton as a key to the message
+                self.q.put(new_msg)  # put new message in the queue
+
             def extend(self, items):
+                # append loop
                 for item in items:
                     self.append(item)
+        
+        q_wrapped = QWrap(q_out)
 
         try:
+            # do predictions
             model.predict_video(video_path,
                                 batch_size=msg[DETECTION_BATCH_SIZE_KEY],
                                 pred_every=msg[PRED_EVERY_KEY],
                                 show_pbar=False,
-                                global_aggregator=QWrap(q_out))
+                                global_aggregator=q_wrapped)
         except:
             logger.exception(f'An error occurred during detection on {video_path}')
         else:
             logger.info(f'detection completed: {video_path}')
 
+        # done with task, empty current task indicator
         cur_detection_task = None
 
+        # if quitting, don't get next item.
         if exit_all:
             break
     
@@ -155,17 +168,31 @@ def run_trackers(q_in, q_dict, output_style, output_dir):
 
     logger.info('trackers thread ready for input')
 
-    # for each new movie launch a thread from the thread pool
+    # global exit indicator flag
     global exit_all
+
+    # for each new movie launch a thread from the thread pool. queue iteration must be in thread pool
+    # executor context.
     with ThreadPoolExecutor(thread_name_prefix='Tracker') as executor:
+
+        # iterate queue messages until the STOP message
         for msg in iter(q_in.get, STOP_MSG):
+            
+            # get video path (used as video identifier)
             video_path = msg[VIDEO_PATH_KEY]
-            if video_path not in q_dict:  # handle new video
+
+            # handle new video
+            if video_path not in q_dict:
+                # add video to queue
                 q_dict[video_path] = Queue()
+
+                # set video annotations output path
                 output_path = None if not output_dir else os.path.join(
                     output_dir,
                     os.path.splitext(os.path.basename(video_path))[0] + "__anno"
                 )
+
+                # execute tracking in stand-alone thread.
                 executor.submit(
                     single_tracker,
                     q_dict[video_path],
@@ -179,6 +206,7 @@ def run_trackers(q_in, q_dict, output_style, output_dir):
                     output_path
                 )
 
+            # get prediction
             pred = msg[PREDICTION_KEY]
 
             # handle "end of tracking" messages from the tracker thread
@@ -194,9 +222,11 @@ def run_trackers(q_in, q_dict, output_style, output_dir):
                 # put predicitons in the correct queue
                 q_dict[video_path].put(pred)
 
+            # if quitting, don't get next item.
             if exit_all:
                 break
         
+        # tell all tracker threads to stop when done with the current frames.
         logger.info('sending STOP command to all tracker threads and waiting for them to quit')
         for q in q_dict.values():
             q.put(STOP_MSG)
@@ -210,6 +240,10 @@ def single_tracker(detection_queue, completion_queue, video_path, detect_every,
     @param; detection_queue: queue to get detection model detections for the given video.
     @param: completion_queue: queue for signalling completion of tracking of the given video.
     @param: video_path: path to the video on which to track objects.
+    @param: detect_every: how many frames to track before accepting detection model detections.
+    @param: merge_iou_threshold: the IOU score threhold for merging items during tracking.
+    @param: refresh_on_detect: if True, removes all tracked items that were not found by the detection model.
+    @param: output_style: the method of saving the output.
     @param: output_path: the path in which to save the output annotations.
     """
     logger.info(f'start tracking: {video_path}')
@@ -245,18 +279,21 @@ def save_output(video_path, data, output_style, output_path=None):
     Save tracking output in the desired format
     @param: data: the tracking data (dictionary) to save
     @param: output_style: the saving method:
-                "FILE" - save as JSON to given `output_path`.
-                "ARANGO" - save as entry in arango DB.
+                "json" - save as JSON to given `output_path`.
+                "anno" - save as annotated video (mp4)
+                "arango" - save as entry in arango DB.
     @param: output_path: local save path in case of "FILE" `output_style`.
     """
-    if OUTPUT_STYLE_JSON in output_style:
+    if OUTPUT_STYLE_JSON in output_style:  # save as JSON
         with open(output_path + '.json', 'w') as f:
             json.dump(data, f, indent=4)
         logger.info(f'successfully saved json annotation for {video_path}')
-    if OUTPUT_STYLE_ANNO in output_style:
+
+    if OUTPUT_STYLE_ANNO in output_style:  # save as annotated video
         annotate_video(video_path, data, output_path, show_pbar=False)
         logger.info(f'successfully saved video annotation for {video_path}')
-    if OUTPUT_STYLE_ARANGO in output_style:
+
+    if OUTPUT_STYLE_ARANGO in output_style:  # save as DB entry
         nodes_saved = __get_remote().save_track_data_to_scenegraph(video_path, data)
         logger.info(f'successfully saved {nodes_saved} DB entries for {video_path}')
 
@@ -266,12 +303,12 @@ def main(q_detector_in: Queue, q_detector_out: Queue, q_dict_trackers: dict, out
          log_file=None):
     """
     launches all engines.
-    @param: q_detector_in: a queue for tasks for the detector.
+    @param: q_detector_in: a queue of tasks for the detector.
     @param: q_detector_out: a queue for passing tasks from the detector to the tracker dispatcher.
     @param: q_dict_trackers: a queue for passing tasks to individual tracker threads.
     @param: output_dir: the directory in which to save all annotation outputs.
-    @param: model_backend: 'tflow' or 'detectron'.
     @param: model_cfg: the name of the CFG constant in the backend utilities file.
+    @param: model_confidence: model prediction confidence threshold.
     @param: log_file: where to save logged information. see `setup_logger` for more info.
     @return: a tuple of Thread object (t1, t2) where t1 belongs to the detector and t2 belongs to the trackers
              dispatcher
@@ -300,6 +337,10 @@ def main(q_detector_in: Queue, q_detector_out: Queue, q_dict_trackers: dict, out
 
 
 def arango_app(q_detector_in: Queue):
+    """
+    An infinite loop polling a scheduler for new movie tracking tasks.
+    @param: q_detector_in: a queue that accepts input for the deteciton model.
+    """
     remote = __get_remote()
     logger.info('Arango client ready')
 
@@ -310,17 +351,28 @@ def arango_app(q_detector_in: Queue):
 
 
 def cmd_line_app(q_detector_in: Queue, q_detector_to_tracker: Queue, q_dict_trackers: dict):
-    global exit_all
-    global cur_detection_task
+    """
+    a command line interface loop function for manual input and status checking.
+    @param: q_detector_in: a queue for tasks for the detector.
+    @param: q_detector_out: a queue for passing tasks from the detector to the tracker dispatcher.
+    @param: q_dict_trackers: a queue for passing tasks to individual tracker threads.
+    """
+    # global indicators
+    global exit_all  # exit sequence flag
+    global cur_detection_task  # current video in detection
     
-    # simple keyboard CLI for adding and viewing tasks
     print('infrastructure ready\n\n>>>', end=' ')
     logger.info('CLI ready to receive commands')
     sys.stdout.flush()
+
+    # iterate stdin commands
     for line in sys.stdin:
+        # clean and log command
         line = line.strip()
         if line:
             logger.info(f'got CLI command: "{line}"')
+
+        # === commands switch start ===
 
         if line == WAIT_CMD:  # wait for all tasks to finish then quit
             logger.info('waiting fo all tasks to complete')
@@ -366,7 +418,7 @@ def cmd_line_app(q_detector_in: Queue, q_detector_to_tracker: Queue, q_dict_trac
             print('refresh on detect:', track_refresh_on_detect_cfg)
             logger.info('refresh on detect: ' + str(track_refresh_on_detect_cfg))
         
-        elif line.startswith(SET_CFG_CMD_PREFIX):
+        elif line.startswith(SET_CFG_CMD_PREFIX):  # set a configuration to a new value
             line = line[len(SET_CFG_CMD_PREFIX):].strip()
             try:
                 __set_cfg_cmd(line)
@@ -402,6 +454,8 @@ def cmd_line_app(q_detector_in: Queue, q_detector_to_tracker: Queue, q_dict_trac
             print(f'unsupported command: "{line}"')
             logger.info(f'unsupported command: "{line}"')
 
+        # === commands switch end ===
+
         print('>>>', end=' ')
         sys.stdout.flush()
 
@@ -410,36 +464,47 @@ def parse_args():
     """
     parse program arguments
     """
-    parser = argparse.ArgumentParser(description='Run ojbect detection and tracking engines')
+    parser = argparse.ArgumentParser(description='Run ojbect detection and tracking engines. For more '
+                                                 'detailed instructions see '
+                                                 'NEBULA2/experts/tracker/instructions.txt')
     parser.add_argument('--backend', '-b',
                         default=None,
-                        help='Detection model backend',
+                        help='Detection model backend. If not provided, any available backend may be '
+                             'used. If a model configuration is provided via the --model argument, then '
+                             'a backend that has that configuration will be used, if one is available.',
                         choices=[at.BACKEND_TFLOW, at.BACKEND_DETECTRON])
     parser.add_argument('--model', '-m',
                         default=None,
-                        help='Detection model configuration. Should be '
-                             'one of the CFG constants in the chosen model utils.')
+                        help='Detection model configuration. Should be one of the CFG constants in the '
+                             'chosen model backend. If not provided, a default configuration for the '
+                             'backend is used.')
     parser.add_argument('--confidence', '-c',
                         default=0.6,
                         type=float,
-                        help='path to output log file')
+                        help='The model prediction confidence threshold (default is 0.6).')
     parser.add_argument('--log', '-l',
                         default=None,
-                        help='path to output log file')
+                        help='path to output log file. If an existing directory is given, then the log '
+                             'file name will be a default name "YYY-MM-dd_HH:mm:ss.log". If not provided, '
+                             'the default filename is used in the current working directory.')
     parser.add_argument('--no-arango',
                         action='store_false',
                         dest='arango',
                         default=True,
-                        help='use command line client with local movies')
+                        help='Adding this flag disables the arango client scheduler daemon.')
     parser.add_argument('--output-style', '-o',
                         nargs="+",
                         default=None,
                         choices=[OUTPUT_STYLE_JSON, OUTPUT_STYLE_ANNO, OUTPUT_STYLE_ARANGO],
-                        help='The method for saving the tracking output')
+                        help='The method for saving the tracking output. If "json" or "anno" are set, '
+                             'the output is redirected to the location of the --output-dir argument. The'
+                             'default is "arango" if the --no-arango flag is NOT set, or "json" otherwise.')
     parser.add_argument('--output-dir', '-d',
                         default=None,
-                        help='For use only when --output-style "json" or "anno" are set. Indicates wher to save '
-                             'the annotations.')
+                        help='For use only when --output-style "json" or "anno" are set. Indicates wher to '
+                             'save the annotations. If "json" or "anno" are set but no --output-dir is '
+                             'provided, a directory called "annotations/" is created in the current working '
+                             'directory.')
 
     # parse then set defaults
     parsed_args = parser.parse_args()
@@ -489,6 +554,10 @@ def __setup_logger(log_file):
 
 
 def __get_remote():
+    """
+    get the global remote utility (create if needed).
+    @return: a RemoteUtility object.
+    """
     global remote
     if remote is None:
         remote = RemoteUtility()
@@ -497,6 +566,12 @@ def __get_remote():
 
 
 def __handle_args_defaults(parsed_args):
+    """
+    check parsed args validity and set default values if necessary.
+    @param: parsed_args: a parsed arguments object from the command line.
+    @return: the parsed arguments after default args set.
+    """
+
     # === Detection Defaults ===
     # no backend or config chosen. use default
     if parsed_args.backend is None and parsed_args.model is None:
@@ -557,40 +632,68 @@ def __handle_args_defaults(parsed_args):
 
 
 def __set_cfg_cmd(cfg_line):
+    """
+    change a global configuration based on a given configuration set command. Raises an exception in case of
+    error.
+    @param: cfg_line: the CFG set command. should be in format: <cfg_name>=<cfg_new_value>.
+                      - cfg_name: one of the configuration keys, e.g. "batch_size" for
+                                  `detection_batch_size_cfg` taken from `DETECTION_BATCH_SIZE_KEY`.
+                      - cfg_new_value: must be a valid value for the cfg, e.g. "batch_size" must be a
+                                       positive integer.
+    """
+    # split configuration name and new value
     cfg_name, value = cfg_line.split('=')
+
+    # === cfg set switch start ===
+    # for the given configuration name, check that the given value is valid and save in the correct global
+    # configuration variable.
+
     if cfg_name == PRED_EVERY_KEY:
         v = int(value)
         assert v > 0
         global pred_every_cfg
         pred_every_cfg = v
+
     elif cfg_name == DETECTION_BATCH_SIZE_KEY:
         v = int(value)
         assert v > 0
         global detection_batch_size_cfg
         detection_batch_size_cfg = v
+
     elif cfg_name == TRACK_TRACKER_TYPE_KEY:
         v = getattr(at.tracking_utils, f'TRACKER_TYPE_{value.upper()}')
         global track_tracker_type_cfg
         track_tracker_type_cfg = v
+
     elif cfg_name == TRACK_MERGE_IOU_THRESH_KEY:
         v = float(value)
         assert 0 < v <= 1
         global track_merge_iou_thresh_cfg
         track_merge_iou_thresh_cfg = v
+
     elif cfg_name == TRACK_REFRESH_ON_DETECT_KEY:
         v = eval(value)
         assert isinstance(v, bool)
         global track_refresh_on_detect_cfg
         track_refresh_on_detect_cfg =v
 
+    # === cfg set switch end ===
+
 
 def __get_video_msg(video_path):
+    """
+    create a video task message to the detector using the current configurations.
+    @param: video_path: the path to the video
+    @return: a dictionary containing all configuration keys and video identifier keys (see value in code).
+    """
+    # check if this is a remote video path via the remote movie prefix.
     if video_path.startswith(REMOTE_MOVIE_CMD_PREFIX):
         is_remote = True
         video_path = video_path[len(REMOTE_MOVIE_CMD_PREFIX):].strip()
     else:
         is_remote = False
     
+    # return message according to current configurations
     return {
         VIDEO_PATH_KEY: video_path,
         IS_REMOTE_KEY: is_remote,

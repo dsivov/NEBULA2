@@ -35,7 +35,7 @@ class PretrainedVideoPredictor(ABC):
     def predict_batch(self, image_batch: np.ndarray):
         """
         Perform prediciton on a batch of images.
-        @param: image_batch: a numpy array of shape (batch_size, H, W, C)
+        @param: image_batch: a numpy array of shape (batch_size, H, W, C) in BGR color format
         """
         pass
 
@@ -51,22 +51,16 @@ class PretrainedVideoPredictor(ABC):
         @param: path_to_video: absolute or relative path to a video file.
         @param: batch_size: the number of images on which to do inference simultaneously.
         @param: pred_every: how many frames to skip between predicitons.
+        @param: resize: a tuple (width, height) that determines the size of the frames when loaded. if None,
+                        the original image is used.
         @param: show_pbar: if True, a progressbar is shown while working on a video.
-        @param: global_aggregator: Any aggregator that implements append or extend, or a python Queue object.
-                If a queue is given, predictions are saved as dicitonaries of the form:
-                {
-                    'video_path': path to video in detection,
-                    'pred': prediction dictionary
-                }
-                If None, create a local list and return at the end.
-        @return: a list of prediction dictionaries in format:
+        @param: global_aggregator: Any aggregator that implements append or extend.
+        @return: an aggregator of prediction dictionaries in format:
                  {
                      "detection_boxes": (x, y, w, h),
                      "detection_classes": the string name of the predicted class,
                      "detection_scores": prediction confidence probability in [0, 1]
                  }
-                 If a queue was given as a global aggregator, the queue is returned in the format
-                 described in the parameter description.
         """
         # load dataset
         if os.path.isdir(path_to_video):
@@ -79,7 +73,6 @@ class PretrainedVideoPredictor(ABC):
             preds = global_aggregator
         else:
             preds = []
-
 
         # iterate video frames for predicitons
         pbar = tqdm(total=len(ds), disable=not show_pbar)
@@ -103,6 +96,7 @@ class PretrainedVideoPredictor(ABC):
                 
                 pbar.update(len(batch))
         
+        # cleanup for pbar and dataset
         pbar.close()
         del ds
 
