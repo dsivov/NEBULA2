@@ -25,7 +25,7 @@ def get_movie_meta(db, movie_id):
         nebula_movies = {}
         #print(movie_id)
         #query = 'FOR doc IN Movies FILTER doc.split == \'0\' AND doc.splits_total == \'30\' RETURN doc'
-        query = 'FOR doc IN StoryLine FILTER doc.arango_id == "{}" RETURN doc.sentences'.format(
+        query = 'FOR doc IN StoryLine RETURN doc.sentences'.format(
             movie_id)
         #query = 'FOR doc IN Movies FILTER doc._id == \'Movies/10715274\' RETURN doc'
         #query = 'FOR doc IN Movies FILTER doc._id == \'Movies/17342682\' RETURN doc'
@@ -34,11 +34,13 @@ def get_movie_meta(db, movie_id):
         #query = 'FOR doc IN Movies FILTER doc._id == \'Movies/11723602\' RETURN doc'
         cursor = db.aql.execute(query)
         for data in cursor:
+            print(data)
             for sents in data:
                 text = ' '.join(sents)
-                print('Text: %s.' % text)
+                #print('Text: %s.' % text)
                 for triple in client.annotate(text):
-                    print('|-', triple)
+                    print(triple)
+            input()
 
     
 

@@ -43,7 +43,7 @@ class STORY_GRAPH_EXPERT_API:
 
 
     def insert_edge_to_storygraph(self, movie_id, arango_id, description, _from, _to):
-        query = 'UPSERT { movie_id: @movie_id, _from: @from, _to: @to} INSERT  \
+        query = 'UPSERT { movie_id: @movie_id, description: @description, _from: @from, _to: @to} INSERT  \
             { movie_id: @movie_id, arango_id: @arango_id, description: @description, _from: @from, _to: @to, step: 1} UPDATE \
                 { step: OLD.step + 1} IN Edges \
                     RETURN { doc: NEW, type: OLD ? \'update\' : \'insert\' }'
