@@ -1,3 +1,4 @@
+from genericpath import exists
 import os
 import glob
 
@@ -15,10 +16,12 @@ class SingleMovieFolder(MultiMovieFolder):
             self.data.append((video_name, i, numf))
 
 
-class VideoFile(MultiMovieFolder):
+class VideoFile(SingleMovieFolder):
     def __init__(self, data_root, T=3, chunks=3, source_fps=30, target_fps=12, transform=None, stride=1,
                  anchor_mode="1", im_format='frame%04d.jpg'):
         frames_out = f'Movies/{os.path.splitext(os.path.basename(data_root))[0]}'
+        os.makedirs(frames_out, exist_ok=True)
+        print(os.path.join(os.getcwd(), frames_out))
         self.extractImages(data_root, frames_out)
         super().__init__(frames_out, T=T, chunks=chunks, source_fps=source_fps, target_fps=target_fps,
         transform=transform, stride=stride, anchor_mode=anchor_mode, im_format=im_format)

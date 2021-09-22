@@ -2,7 +2,7 @@ import os
 
 from .download_from_google_drive import download_file_from_google_drive
 from .ActionDetector import ActionDetector, STEP_PRETRAINED_MODEL_PATH
-from .datasets import MultiMovieFolder, SingleMovieFolder
+from .datasets import MultiMovieFolder, SingleMovieFolder, VideoFile
 
 STEP_PRETRAINED_MODEL_GDRIVE_ID = '1hIzrTzR50pYwLLzu_5GpmEGY4Q-e1-BX'
 
