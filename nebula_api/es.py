@@ -50,24 +50,25 @@ class Esearch:
                 )
 
         return results
-    
-    def get_results_doc(self, qin,  length=10, thr=0.01):
-        results = []
-        #step = settings.STEP_SEARCH_RESULTS
-        #number_of_steps = settings.MAX_SEARCH_RESULTS // step
-        #start = 0
+
+    def get_results_doc(self, qin, from_index=0, to_index=10, thr=0.01):
         s = Search(using=self.es, index=self.index).query(
             SimpleQueryString(
                 query=qin,
                 fields=["doc.description", "doc.movie_name", "doc.db_id"],
                 default_operator='and'
             )
-        ).extra(min_score=thr, from_= 0, size = length)
-        s = s.highlight_options(order='score')
+        ).extra(min_score=thr)
+
+        count = s.count()
+
+        s = s.highlight_options(order='score')[from_index: to_index]
+
+        results = []
         for hit in s.execute():
             if hit.doc.db_id not in results:
                 doc = hit.doc
                 doc['score'] = hit.meta.score
-                print("Score: ", hit.meta.score)        
                 results.append(doc)
-        return results
+
+        return count, results

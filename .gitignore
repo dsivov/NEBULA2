@@ -133,3 +133,4 @@ oldgit
 .idea
 __pycache__/
 logs/
+ve/

@@ -218,3 +218,5 @@ DB_NAME = Cfg(['graphdb']).get('graphdb','name')
 #em_loader = EmbeddingsLoader()
 MAX_SEARCH_RESULTS = 1000000
 STEP_SEARCH_RESULTS = 1000
+
+CURRENT_SERVER_HOST = os.getenv('CURRENT_SERVER_HOST', 'http://ec2-52-57-66-3.eu-central-1.compute.amazonaws.com:9000')
