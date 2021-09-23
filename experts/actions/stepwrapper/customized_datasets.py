@@ -3,9 +3,9 @@ import os
 import glob
 
 import cv2
-from .STEP.data.customize import CustomizedDataset as MultiMovieFolder
+from .STEP.data.customize import CustomizedDataset as CustomizedMultiMovieFolder
 
-class SingleMovieFolder(MultiMovieFolder):
+class CustomizedFrameImagesFolder(CustomizedMultiMovieFolder):
     def make_list(self):
         video_name = os.path.basename(self.data_root)
         self.data = []
@@ -16,7 +16,7 @@ class SingleMovieFolder(MultiMovieFolder):
             self.data.append((video_name, i, numf))
 
 
-class VideoFile(SingleMovieFolder):
+class CustomizedVideoFile(CustomizedFrameImagesFolder):
     def __init__(self, data_root, T=3, chunks=3, source_fps=30, target_fps=12, transform=None, stride=1,
                  anchor_mode="1", im_format='frame%04d.jpg'):
         frames_out = f'Movies/{os.path.splitext(os.path.basename(data_root))[0]}'

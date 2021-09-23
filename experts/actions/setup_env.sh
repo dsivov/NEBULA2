@@ -2,7 +2,7 @@
 
 
 ENV_NAME="step"
-ACTION_DETECTOR_DIR="action_detector"
+ACTION_DETECTOR_DIR="stepwrapper"
 
 
 function install_step {

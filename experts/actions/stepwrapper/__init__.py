@@ -1,8 +1,9 @@
 import os
 
+from . import STEP
 from .download_from_google_drive import download_file_from_google_drive
-from .ActionDetector import ActionDetector, STEP_PRETRAINED_MODEL_PATH
-from .datasets import MultiMovieFolder, SingleMovieFolder, VideoFile
+from .STEPDetector import STEPDetector, STEP_PRETRAINED_MODEL_PATH
+from .customized_datasets import CustomizedMultiMovieFolder, CustomizedFrameImagesFolder, CustomizedVideoFile
 
 STEP_PRETRAINED_MODEL_GDRIVE_ID = '1hIzrTzR50pYwLLzu_5GpmEGY4Q-e1-BX'
 

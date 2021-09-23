@@ -4,7 +4,7 @@ from collections import OrderedDict, defaultdict
 import numpy as np
 import torch
 from tqdm import tqdm
-from .datasets import SingleMovieFolder, VideoFile
+from .customized_datasets import CustomizedFrameImagesFolder, CustomizedVideoFile
 from .STEP.data.customize import detection_collate
 from .STEP.data.augmentations import BaseTransform
 from .STEP.external.maskrcnn_benchmark.roi_layers import nms
@@ -16,7 +16,7 @@ STEP_PRETRAINED_MODEL_PATH = os.path.join(os.path.dirname(__file__), 'STEP', 'pr
                                           'ava_step.pth')
 
 
-class ActionDetector:
+class STEPDetector:
     """
     A video wrapper for the tensorflow object detection API.
     """
@@ -114,23 +114,28 @@ class ActionDetector:
     def predict_video(self,
                       path_to_video,
                       im_format: str = 'frame%04d.jpg',
-                      source_fps: int = 30,
+                      source_fps: int = 25,
                       show_pbar: bool = True,
                       num_workers=4):
 
         ################ DataLoader setup #################
         if os.path.isdir(path_to_video):
-            dataset = SingleMovieFolder(path_to_video, self._args.T, self._args.NUM_CHUNKS[self._args.max_iter], source_fps,
-                                        self._args.fps,
-                                        BaseTransform(self._args.image_size, self._args.means, self._args.stds,self._args.scale_norm),
-                                        anchor_mode=self._args.anchor_mode, im_format=im_format)
+            dataset = CustomizedFrameImagesFolder(path_to_video, self._args.T,
+                                                  self._args.NUM_CHUNKS[self._args.max_iter], source_fps,
+                                                  self._args.fps,
+                                                  BaseTransform(self._args.image_size, self._args.means,
+                                                                self._args.stds, self._args.scale_norm),
+                                                  anchor_mode=self._args.anchor_mode, im_format=im_format)
         else:
-            dataset = VideoFile(path_to_video, self._args.T, self._args.NUM_CHUNKS[self._args.max_iter], source_fps,
-                                self._args.fps,
-                                BaseTransform(self._args.image_size, self._args.means, self._args.stds,self._args.scale_norm),
-                                anchor_mode=self._args.anchor_mode, im_format=im_format)
+            dataset = CustomizedVideoFile(path_to_video, self._args.T,
+                                          self._args.NUM_CHUNKS[self._args.max_iter], source_fps,
+                                          self._args.fps,
+                                          BaseTransform(self._args.image_size, self._args.means,
+                                                        self._args.stds, self._args.scale_norm),
+                                          anchor_mode=self._args.anchor_mode, im_format=im_format)
+
         dataloader = torch.utils.data.DataLoader(dataset, self._args.batch_size, num_workers=num_workers,
-                                    shuffle=False, collate_fn=detection_collate, pin_memory=True)
+                                                 shuffle=False, collate_fn=detection_collate, pin_memory=True)
         ################ Inference #################
 
         # save predictions in global aggregator if provided
