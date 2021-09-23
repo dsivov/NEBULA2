@@ -99,7 +99,8 @@ class VideoPredictor(PretrainedVideoPredictor):
             image_batch_formatted.append({'image': img, 'width': width, 'height': height})
 
         # perform predictions
-        preds = self.model(image_batch_formatted)
+        with torch.no_grad():
+            preds = self.model(image_batch_formatted)
 
         # format output for uniform output style
         for i, p in enumerate(preds):
