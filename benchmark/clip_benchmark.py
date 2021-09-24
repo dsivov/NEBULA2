@@ -101,6 +101,7 @@ class NebulaVideoEvaluation:
         old_embeddings = None
         diff_list = []
         ret, frame = cap.read()
+        frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
         embedding_array = np.zeros((0, self.model_res))
         frame_num = 0
         fps = cap.get(cv.CAP_PROP_FPS)
@@ -119,6 +120,8 @@ class NebulaVideoEvaluation:
                     old_embeddings = embeddings
             frame_num = frame_num + 1
             ret, frame = cap.read()
+            if frame is not None:
+                frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
 
         return embedding_array
 

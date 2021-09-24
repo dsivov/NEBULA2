@@ -8,6 +8,7 @@ from benchmark.nlp_benchmark import NebulaStoryEvaluation
 from milvus_api.milvus_api import MilvusAPI
 from benchmark.graph_encoder import GraphEncoder
 import numpy as np
+import csv
 
 
 def time_to_msec(time_str):
@@ -92,6 +93,27 @@ class LSMDCProcessor:
             id_count += 1
 
 
+def show_lsmdc_pickle_results():
+    outfolder = '/home/migakol/data/lsmdc_test'
+    result_file = os.path.join(outfolder, 'result_list1.pickle')
+    out_file = os.path.join(outfolder, 'result_csv.csv')
+
+    with open(result_file, 'rb') as f:
+        results_list = pickle.load(f)
+        with open(out_file, 'w', newline='') as csvfile:
+            fieldnames = ['Score', 'Original', 'Chosen']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+            writer.writerow({'Score': 'Score', 'Original': 'Original', 'Chosen': 'Chosen'})
+            for k in range(len(results_list[0])):
+                writer.writerow({'Score': results_list[0][k],
+                                'Original': results_list[1][k][0:results_list[1][k].find('_MK_')],
+                                'Chosen': results_list[1][k][results_list[1][k].find('_MK_') + 4:]})
+
+    pass
+    print('Done')
+
+
 def test_lsmdc_sentences_with_clip():
     """
     The idea is to take a LSMDC movies, convert it into a (number of) CLIP embedding
@@ -112,11 +134,17 @@ def test_lsmdc_sentences_with_clip():
 
     text_emb_matrix = np.zeros((len(all_movies), 640))
     for k, movie in enumerate(all_movies):
-        emb = video_eval.encode_text(movie['text'])
+        if len(movie['text']) > 77:
+            emb = video_eval.encode_text(movie['text'][0:77])
+        else:
+            emb = video_eval.encode_text(movie['text'])
         text_emb_matrix[k, :] = emb / np.linalg.norm(emb)
 
     results_list = []
+    sentence_pair = []
     for k, movie in enumerate(all_movies):
+        if k < 2:
+            continue
         movie_path = main_folder + movie['path']
         embedding_list, boundaries = video_eval.create_clip_representation(movie_path, [0.8])
 
@@ -132,8 +160,9 @@ def test_lsmdc_sentences_with_clip():
                 best_pos = pos
 
         results_list.append(best_pos)
+        sentence_pair.append(movie['text'] + '_MK_' + all_movies[best_pos]['text'])
         with open(result_file, 'wb') as f:
-            pickle.dump(results_list, f)
+            pickle.dump([results_list, sentence_pair], f)
 
 
 # Similarity between CLIP sentences from LSMDC frames and corresponding videos
@@ -252,6 +281,15 @@ def create_similarity_analysis():
     print(v2)
     print(v3)
 
+
+def temp_debug():
+    outfolder = '/home/migakol/data/lsmdc_test'
+    result_file = os.path.join(outfolder, 'result_list.pickle')
+
+    data = pickle.load(open(result_file, 'rb'))
+
+    pass
+
 if __name__ == '__main__':
     print('Start textual comparison')
     # lsmdc_processor = LSMDCProcessor()
@@ -259,4 +297,6 @@ if __name__ == '__main__':
     # create_similarity_analysis()
     # clip_based_lsmdc_similarity()
     # test_clip_based_lsmdc_similarity()
-    test_lsmdc_sentences_with_clip()
+    # temp_debug()
+    show_lsmdc_pickle_results()
+    # test_lsmdc_sentences_with_clip()
