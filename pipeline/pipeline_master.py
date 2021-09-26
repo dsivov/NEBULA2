@@ -1,6 +1,5 @@
-from benchmark.connection import connect_db
-from experts.scene_detector_api import NEBULA_SCENE_DETECTOR
-from common.cfg import Cfg
+from nebula_api.milvus_api import connect_db
+from nebula_api.scene_detector_api import NEBULA_SCENE_DETECTOR
 import pickle
 
 from posixpath import basename
@@ -9,6 +8,8 @@ from pathlib import Path
 import redis
 import cv2 as cv
 import pandas as pd
+
+from experts.tracker import autotracker as at
 
 def auxilary_function():
     """
@@ -155,6 +156,11 @@ class Pipeline:
             movie_id = '0'
 
         return movie_id
+
+
+    def run_tracker_on_video(self):
+        pass
+
 
     def process_new_movie(self, movie_path):
         # 1. Check if the movie exists

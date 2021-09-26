@@ -59,12 +59,14 @@ class VideoPredictor(PretrainedVideoPredictor):
         @param: confidence_threshold: only save predictions with a confidence score above this threshold.
         @param: device: the inference device (CPU or GPU)
         """
-        super().__init__(pretrained_model_cfg, confidence_threshold)
-        
-        # move model to device
         if not device:
             device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         self.device = device
+
+        super().__init__(pretrained_model_cfg, confidence_threshold)
+        
+        # move model to device
+
         self.model.to(device)
 
         # keep CPU device ready for quick GPU detach.
@@ -73,6 +75,8 @@ class VideoPredictor(PretrainedVideoPredictor):
     def load_model(self):
         # create cfg for model
         cfg = get_cfg()
+        if self.device == torch.device('cpu'):
+            cfg.MODEL.DEVICE = 'cpu'
         cfg.merge_from_file(model_zoo.get_config_file(self.model_cfg))
         cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(self.model_cfg)
         cfg.MODEL.RETINANET.SCORE_THRESH_TEST = self.confidence_t

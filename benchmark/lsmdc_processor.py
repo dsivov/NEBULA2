@@ -2,10 +2,10 @@ import pandas as pd
 import os
 from arango import ArangoClient
 import pickle
-from benchmark.connection import connect_db
+from nebula_api.milvus_api import connect_db
 from benchmark.clip_benchmark import NebulaVideoEvaluation
 from benchmark.nlp_benchmark import NebulaStoryEvaluation
-from milvus_api.milvus_api import MilvusAPI
+from nebula_api.milvus_api import MilvusAPI
 from benchmark.graph_encoder import GraphEncoder
 import numpy as np
 import csv
@@ -40,6 +40,7 @@ class LSMDCProcessor:
         self.jpg_links = 'downloadLinksJpg.txt'
         self.save_benchmark = 'text_benchmark.npy'
         self.db = connect_db('nebula_datadriven')
+
 
     def get_all_movies(self):
         query = 'FOR doc IN lsmdc_clips RETURN doc'

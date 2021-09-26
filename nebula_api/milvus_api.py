@@ -5,12 +5,17 @@ from nebula_api.databaseconnect import DatabaseConnector as dbc
 from milvus import Milvus, IndexType, MetricType, Status
 from config.config import NEBULA_CONF
 
+
+def connect_db(dbname):
+    arangodb = dbc()
+    db = arangodb.connect_db(dbname)
+    return db
+
+
 class MilvusAPI():
     def __init__(self, backend , collection_name, dbname, dim):
         self.collection_name = collection_name
-        arangodb = dbc()
-        db = arangodb.connect_db(dbname) 
-        self.db = db
+        self.db = connect_db(dbname)
         self.dbname = dbname
         self.dim = dim
         if db.has_collection('milvus_' + collection_name):
