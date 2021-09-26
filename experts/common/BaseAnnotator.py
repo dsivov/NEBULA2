@@ -19,6 +19,8 @@ class BaseAnnotator(ABC):
         """
         pass
 
+
+
     def annotate_video(self, video_path, annotations, output_path, video_fps=25, show_pbar=True):
         """
         annotate an entire video.
@@ -32,6 +34,7 @@ class BaseAnnotator(ABC):
                     ...
                 }
                 The actual detections object is dependant on the inheritor's implementation of
+                the `overlay_prediction_on_frame` function.
         @param: output_path: The path to save the output annotated video (without extension).
         @param: show_pbar: If True, a progress bar is shown while annotating.
         """
@@ -39,10 +42,8 @@ class BaseAnnotator(ABC):
         # load dataset
         if os.path.isdir(video_path):
             ds = FrameImagesFolder(video_path)
-            frames_per_second = 30  # TODO handle 30 FPS default
         else:
             ds = VideoFile(video_path)
-            frames_per_second = ds.video.get(cv2.CAP_PROP_FPS)
 
         # create video writer object
         height, width, _ = next(iter(ds)).shape
@@ -52,7 +53,7 @@ class BaseAnnotator(ABC):
             # some installation of opencv may not support x264 (due to its license),
             # you can try other format (e.g. MPEG)
             fourcc=cv2.VideoWriter_fourcc(*"mp4v"),
-            fps=float(frames_per_second),
+            fps=float(video_fps),
             frameSize=(width, height),
             isColor=True
         )

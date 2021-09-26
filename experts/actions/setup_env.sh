@@ -4,6 +4,9 @@
 ENV_NAME="step"
 ACTION_DETECTOR_DIR="stepwrapper"
 
+APEX_PATH_EXPORT="export PATH=/usr/local/cuda/bin:\$PATH"
+APEX_LD_LIB_EXPORT="export LD_LIBRARY_PATH=/usr/local/cuda/lib64:\$LD_LIBRARY_PATH"
+
 
 function install_step {
     # install dependencies
@@ -81,3 +84,23 @@ load_base_env
 install_env
 
 popd  # "$(dirname "$0")"
+
+
+# prepare environment variables in .zshrc
+if grep -Fxq "$APEX_PATH_EXPORT" ~/.zshrc
+then
+    echo "\"$APEX_PATH_EXPORT\" already in ~/.zshrc"
+else
+    eval $APEX_PATH_EXPORT
+    echo $APEX_PATH_EXPORT >> ~/.zshrc
+    echo "added \"$APEX_PATH_EXPORT\" to ~/.zshrc"
+fi
+
+if grep -Fxq "$APEX_LD_LIB_EXPORT" ~/.zshrc
+then
+    eval $APEX_LD_LIB_EXPORT
+    echo "\"$APEX_LD_LIB_EXPORT\" already in ~/.zshrc"
+else
+    echo $APEX_LD_LIB_EXPORT >> ~/.zshrc
+    echo "added \"$APEX_LD_LIB_EXPORT\" to ~/.zshrc"
+fi

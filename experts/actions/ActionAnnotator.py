@@ -43,7 +43,7 @@ class ActionAnnotator(BaseAnnotator):
 
             count = 0
             for label, score in zip(classes, scores):
-                draw.text((box[0]+10, box[1]+10+count*20), f'{label}: {score:.2f}', fill="white")
+                draw.text((box[0]+10, box[1]+10+count*20), f'{label}: {score:.2f}', fill="green")
                 count += 1
 
         return np.array(I)[..., ::-1]
