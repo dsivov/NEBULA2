@@ -8,7 +8,7 @@ import cv2 as cv
 import itertools
 import copy
 
-from milvus_api.milvus_api import MilvusAPI
+from nebula_api.milvus_api import MilvusAPI
 from milvus import Milvus
 
 
