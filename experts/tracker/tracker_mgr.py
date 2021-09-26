@@ -12,7 +12,7 @@ from collections import defaultdict
 
 import autotracker as at
 from remote_utils import RemoteUtility
-from my_annotator import annotate_video
+from TrackerAnnotator import TrackerAnnotator
 
 
 # ===== Input Constants =====
@@ -69,7 +69,7 @@ exit_all = False
 cur_detection_task = None
 
 # set global logger
-logger = logging.getLogger('Engine Manager')
+logger = logging.getLogger('Tracker Manager')
 
 # set global remote comm
 remote = None
@@ -259,7 +259,7 @@ def single_tracker(detection_queue, completion_queue, video_path, detect_every,
             logger=logger
         )
     except at.tracking_utils.EarlyStopException:
-        logger.exception(f'Tracking stopped early for: {video_path}')
+        logger.info(f'Tracking stopped early for: {video_path}')
         completion_queue.put({VIDEO_PATH_KEY: video_path, PREDICTION_KEY: TRACK_STOPPED_MSG})
     except:
         logger.exception(f'An error occurred during tracking on {video_path}')
@@ -290,7 +290,7 @@ def save_output(video_path, data, output_style, output_path=None):
         logger.info(f'successfully saved json annotation for {video_path}')
 
     if OUTPUT_STYLE_ANNO in output_style:  # save as annotated video
-        annotate_video(video_path, data, output_path, show_pbar=False)
+        TrackerAnnotator().annotate_video(video_path, data, output_path, show_pbar=False)
         logger.info(f'successfully saved video annotation for {video_path}')
 
     if OUTPUT_STYLE_ARANGO in output_style:  # save as DB entry

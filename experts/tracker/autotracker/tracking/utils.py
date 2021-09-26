@@ -1,11 +1,14 @@
 import os
+import sys
 from queue import Queue
 
 import cv2
 from shapely.geometry import box
 from tqdm import tqdm
 
-from ..data.datasets import FramesDataset, VideoDataset
+# import from common
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+from common.datasets import VideoFile, FrameImagesFolder
 
 TRACKER_TYPE_CSRT = 'CSRT'
 TRACKER_TYPE_KCF  = 'KCF'
@@ -182,9 +185,9 @@ class MultiTracker:
         """
         # load dataset
         if os.path.isdir(video_path):
-            ds = FramesDataset(video_path)
+            ds = FrameImagesFolder(video_path)
         else:
-            ds = VideoDataset(video_path)
+            ds = VideoFile(video_path)
 
         # output aggregator
         track_data = {}

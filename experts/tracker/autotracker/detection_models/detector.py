@@ -1,11 +1,13 @@
 from abc import ABC, abstractmethod
 import os
-from queue import Queue
+import sys
 
 import numpy as np
 from tqdm import tqdm
 
-from ..data.datasets import VideoDataset, FramesDataset
+# import from common
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+from common.datasets import VideoFile, FrameImagesFolder
 
 class PretrainedVideoPredictor(ABC):
     """
@@ -64,9 +66,9 @@ class PretrainedVideoPredictor(ABC):
         """
         # load dataset
         if os.path.isdir(path_to_video):
-            ds = FramesDataset(path_to_video, get_every=pred_every, resize=resize)
+            ds = FrameImagesFolder(path_to_video, get_every=pred_every, resize=resize)
         else:
-            ds = VideoDataset(path_to_video, get_every=pred_every, resize=resize)
+            ds = VideoFile(path_to_video, get_every=pred_every, resize=resize)
 
         # save predictions in global aggregator if provided
         if global_aggregator is not None:
