@@ -1,0 +1,61 @@
+{
+	"mongodb": {
+		"host": "localhost",
+		"port": 27017,
+		"user": "sagiv",
+		"passwd": "sagiv",
+		"dbname": "nebula"
+	},
+	"kfchannel": {
+		"vtag": "vtag_kostya_new",
+		"reid": "reid_kostya_new",
+		"dlm": "dlm_kostya_new",
+		"sgb_tag": "sgb_kostya_new",
+		"stag": "stag_kostya_new",
+		"fusion": "fuskostyanew",
+		"monitor": "mon_sagiv"
+	},
+	"esdb": {
+		"bucket_name": "tnkv",
+		"upload_bucket_name": "webui-static",
+		"minimal_confidence": 70,
+		"keep_rek": true,
+		"chunks_dir": "video_chunks11",
+		"es_host_old": "https://search-tnnb2-yy5xig6cfc4fszthkja7n33l2q.us-east-2.es.amazonaws.com/",
+		"es_host": "http://tnnb2_master:NeBuLa_2@ec2-18-158-123-0.eu-central-1.compute.amazonaws.com",
+		"es_host_prod": "https://tnnbmaster:NeBuLa_2@search-tnnbprod-p7ebzhkv47fblrtoz4de2rkuoa.eu-central-1.es.amazonaws.com",
+		"se_indx": "datadriven",
+		"kafka_topic": "webui"
+	},
+	"graphdb": {
+		"name": "nebula_datadriven"
+	},
+	"cl4vrd": {
+		"threshold": 0.2
+	},
+	"general": {
+		"execution_mode": "dev"
+	},
+	"redis_db": {
+		"host": "127.0.0.1",
+		"port": 6379
+	},
+	"reid": {
+		"face": {
+			"distance_threshold": 0.51,
+			"distance_metric": "euclidean"
+		},
+		"person": {
+			"distance_threshold": 0.13,
+			"distance_metric": "cosine",
+			"model_name": "osnet_ain_x1_0",
+			"device": "cuda"
+		}
+	},
+	"thread_pool": {
+		"size": 8
+	},
+	"engines": {
+		"ammount": 2
+	}
+}

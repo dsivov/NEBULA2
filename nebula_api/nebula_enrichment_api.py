@@ -3,7 +3,7 @@ import sys
 import time
 from arango import ArangoClient
 from nebula_api.databaseconnect import DatabaseConnector
-from config.config import NEBULA_CONF 
+from config_nebula.config import NEBULA_CONF
 
 
 

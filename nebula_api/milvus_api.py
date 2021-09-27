@@ -3,7 +3,7 @@ import milvus
 from numpy import delete
 from nebula_api.databaseconnect import DatabaseConnector as dbc
 from milvus import Milvus, IndexType, MetricType, Status
-from config.config import NEBULA_CONF
+from config_nebula.config import NEBULA_CONF
 
 
 def connect_db(dbname):
