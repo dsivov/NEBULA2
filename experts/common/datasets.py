@@ -8,6 +8,8 @@ import numpy as np
 
 from PIL import Image
 
+from .RemoteAPIUtility import RemoteAPIUtility
+
 
 class FramesDataset(ABC):
     """
@@ -108,3 +110,16 @@ class FrameImagesFolder(FramesDataset):
 
             # return as BGR image (like cv2 video).
             yield np.array(img)[:, :, ::-1]
+
+
+class RemoteVideo(FrameImagesFolder):
+    def initialize_frames(self):
+        remote = RemoteAPIUtility()
+
+        # frames_dir should be arango_id, e.g. Movies/12345678
+        # download movie and continue as images forlder.
+        num_frames_downloaded = remote.downloadDirectoryFroms3(self.frames_dir)
+        if num_frames_downloaded == 0:
+            raise ValueError(f'no frames to download at ID {self.frames_dir}')
+
+        return super().initialize_frames()

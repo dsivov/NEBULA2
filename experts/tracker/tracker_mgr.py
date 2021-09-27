@@ -11,7 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 from collections import defaultdict
 
 import autotracker as at
-from remote_utils import RemoteUtility
+from TrackerAPIUtility import TrackerAPIUtility
 from TrackerAnnotator import TrackerAnnotator
 
 
@@ -560,7 +560,7 @@ def __get_remote():
     """
     global remote
     if remote is None:
-        remote = RemoteUtility()
+        remote = TrackerAPIUtility()
 
     return remote
 
