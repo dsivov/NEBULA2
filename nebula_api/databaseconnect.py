@@ -1,5 +1,5 @@
 from arango import ArangoClient
-from config.config import NEBULA_CONF
+from config_nebula.config import NEBULA_CONF
 
 class DatabaseConnector():
     def __init__(self):
