@@ -134,3 +134,7 @@ oldgit
 __pycache__/
 logs/
 ve/
+
+
+# IDE
+.vscode/
