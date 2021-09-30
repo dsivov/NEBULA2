@@ -8,19 +8,10 @@ from common.ExpertManager import OUTPUT_STYLE_ANNO, OUTPUT_STYLE_ARANGO, OUTPUT_
 
 
 managers_dict = {
+    # dirname: manager_namne (module + class)
     'tracker': 'TrackerManager',
     'actions': 'ActionsManager'
 }
-
-# def list_experts():
-#     experts_dir = os.path.dirname(__file__)
-#     candidates = os.listdir(experts_dir)
-#     experts = []
-#     for c in candidates:
-#         if not c.startswith('.') and os.path.isdir(os.path.join(experts_dir, c)):
-#             experts.append(c)
-    
-#     return experts
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Run ojbect detection and tracking engines. For more '
@@ -77,6 +68,7 @@ def parse_args():
     
 
     # ===== actions args args =====
+    # no extra arguments. this is here to add the "actions" option
     actions_parser = subparsers.add_parser("actions")
 
 
@@ -106,7 +98,7 @@ def __handle_args_defaults(parsed_args):
 
     # === Output Defaults ===
     # default output to arango without local save
-    if not parsed_args.output_style and not parsed_args.output_dir:
+    if not parsed_args.output_style:
         if parsed_args.arango:
             parsed_args.output_style = [OUTPUT_STYLE_ARANGO]
         else:
@@ -126,6 +118,10 @@ def __handle_args_defaults(parsed_args):
 
 if __name__ == "__main__":
     args = parse_args()
+    print('running with config:')
+    for k, v in vars(args).items():
+        print(f'{k}: {v}')
+
     mgr_name = managers_dict[args.expert]
     mgr_module = __import__(f'{args.expert}.{mgr_name}', fromlist=[mgr_name])
     mgr_class = getattr(mgr_module, mgr_name)

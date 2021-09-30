@@ -79,7 +79,7 @@ class ActionsManager(ExpertManager):
 
     def _get_video_msg(self, video_path, is_remote):
         msg = {VIDEO_PATH_KEY: video_path, IS_REMOTE_KEY: is_remote}
-        msg.update(self.get_currnt_config())
+        msg.update(self.get_current_config())
 
         video_info = VideoInfo(video_path)
         msg[FPS_KEY] = video_info.fps if video_info.fps else self.default_fps.get()

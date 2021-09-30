@@ -127,7 +127,7 @@ class TrackerManager(ExpertManager):
 
     def _get_video_msg(self, video_path, is_remote):
         msg = {VIDEO_PATH_KEY: video_path, IS_REMOTE_KEY: is_remote}
-        msg.update(self.get_currnt_config())
+        msg.update(self.get_current_config())
 
         video_info = VideoInfo(video_path)
         msg[FPS_KEY] = video_info.fps if video_info.fps else self.default_fps.get()
@@ -386,7 +386,7 @@ class TrackerStep(ExpertPipelineStep):
             self.logger.info(f'successfully saved video annotation for {video_path}')
 
         if OUTPUT_STYLE_ARANGO in output_style:  # save as DB entry
-            nodes_saved = self.api.save_action_data_to_scene_graph(video_path, preds)
+            nodes_saved = self.api.save_track_data_to_scenegraph(video_path, preds)
             self.logger.info(f'successfully saved {nodes_saved} DB entries for {video_path}')
             
         

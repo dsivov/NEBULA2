@@ -295,7 +295,7 @@ class ExpertManager(ABC):
     @CLI_command
     def cfg(self, line=''):
         """list all editable configurations"""
-        for name, attr in self.get_currnt_config().items():
+        for name, attr in self.get_current_config().items():
             self.print_n_log(f'{name}: {attr}')
 
     @CLI_command
@@ -318,7 +318,7 @@ class ExpertManager(ABC):
         return {name: getattr(cls, name) for name, attr in cls_attrs
                 if callable(attr) and getattr(attr, '_CLI_command', False)}
 
-    def get_currnt_config(self):
+    def get_current_config(self):
         return {name: attr.get() for name, attr in self.__dict__.items()
                 if isinstance(attr, global_config)}
 
