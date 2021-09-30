@@ -18,10 +18,10 @@ class MilvusAPI():
         self.db = connect_db(dbname)
         self.dbname = dbname
         self.dim = dim
-        if db.has_collection('milvus_' + collection_name):
-            milvus_metadata = db.collection('milvus_' + collection_name)
+        if self.db.has_collection('milvus_' + collection_name):
+            milvus_metadata = self.db.collection('milvus_' + collection_name)
         else:
-            milvus_metadata = db.create_collection('milvus_' + collection_name)
+            milvus_metadata = self.db.create_collection('milvus_' + collection_name)
         self.milvus_metadata = milvus_metadata
         if backend == 'milvus':
             self.create_milvus_database(dim)
