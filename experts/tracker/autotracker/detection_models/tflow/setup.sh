@@ -12,7 +12,7 @@ pip install pycocotools
 
 # get models repo
 echo "===== cloning models repository ====="
-git clone --depth 1 https://github.com/tensorflow/models
+git clone --depth 1 https://github.com/tensorflow/models  # todo fork
 
 # get protoc 3.3 to fix issue stated here: https://github.com/tensorflow/models/issues/1834
 mkdir protoc_3.3
