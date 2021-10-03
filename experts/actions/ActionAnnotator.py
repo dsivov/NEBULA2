@@ -4,7 +4,7 @@ import sys
 import numpy as np
 from PIL import Image, ImageDraw
 
-from stepwrapper.STEP.utils.vis_utils import draw_rectangle
+from .stepwrapper.STEP.utils.vis_utils import draw_rectangle
 
 # import from common
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))

@@ -19,8 +19,6 @@ class BaseAnnotator(ABC):
         """
         pass
 
-
-
     def annotate_video(self, video_path, annotations, output_path, video_fps=25, show_pbar=True):
         """
         annotate an entire video.

@@ -79,3 +79,16 @@ class TrackerAPIUtility(RemoteAPIUtility):
                 nodes_saved += 1
         
         return nodes_saved
+
+    def scheduler_loop(self):
+        """
+        loops forever, waiting for movie tasks from arang.
+        @return: yields movie arago ID's.
+        """
+        while True:
+            # Signaling your code, that we have newly uploaded movie, frames are stored in S3.
+            # Returns movie_id in form: Movie/<xxxxx>
+            movies = self.nre.wait_for_change("Actors", "ClipScene") 
+            for movie in movies:
+                yield movie
+            self.nre.update_expert_status("Actors") #Update scheduler, set it to done status

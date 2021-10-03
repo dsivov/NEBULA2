@@ -3,4 +3,4 @@ __pycache__/
 *.jpg
 *.avi
 *.mp4
-*__anno.*
+*__anno*.*

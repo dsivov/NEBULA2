@@ -16,7 +16,7 @@ function install_step {
     pushd $ACTION_DETECTOR_DIR
 
     # install apex for GPU
-    git clone https://github.com/NVIDIA/apex.git
+    git clone https://github.com/NVIDIA/apex.git  #TODO fork
     pushd apex/
     python setup.py install --cuda_ext --cpp_ext
     popd  # apex/

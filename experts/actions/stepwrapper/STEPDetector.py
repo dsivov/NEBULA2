@@ -21,10 +21,7 @@ class STEPDetector:
     A video wrapper for the tensorflow object detection API.
     """
 
-    def __init__(self,
-                 checkpoint_path: str = STEP_PRETRAINED_MODEL_PATH,
-                 confidence_threshold: float = 0.4,
-                 iou_threshold: float = 0.8):
+    def __init__(self, checkpoint_path: str = STEP_PRETRAINED_MODEL_PATH):
         """
         Create a predictor of the given pretrained model config.
         @param: pretrained_model_cfg: the name of a model config file. use CFG_ constants.
@@ -32,8 +29,6 @@ class STEPDetector:
         """
         print('loading model')
         self.checkpoint_path = checkpoint_path
-        self.confidence_t = confidence_threshold
-        self.iou_t = iou_threshold
         self.model, self.label_map = self.load_model()
 
     def load_model(self):
@@ -115,8 +110,11 @@ class STEPDetector:
                       path_to_video,
                       im_format: str = 'frame%04d.jpg',
                       source_fps: int = 25,
+                      confidence_threshold=0.4,
+                      global_iou_threshold=0.8,
                       show_pbar: bool = True,
-                      num_workers=4):
+                      num_workers=0,
+                      global_aggregator=None):
 
         ################ DataLoader setup #################
         if os.path.isdir(path_to_video):
@@ -139,7 +137,10 @@ class STEPDetector:
         ################ Inference #################
 
         # save predictions in global aggregator if provided
-        preds = []
+        if global_aggregator is not None:
+            preds = global_aggregator
+        else:
+            preds = []
 
         with torch.no_grad():
             for images, tubes, infos in tqdm(dataloader, disable=not show_pbar):
@@ -175,7 +176,7 @@ class STEPDetector:
                     }
                     for cl_ind in range(self._args.num_classes):
                         scores = cur_pred_prob[:, cl_ind].squeeze()
-                        c_mask = scores.gt(self.confidence_t) # greater than a threshold
+                        c_mask = scores.gt(confidence_threshold) # greater than a threshold
                         scores = scores[c_mask]
                         idx = np.where(c_mask.numpy())[0]
                         if len(scores) == 0:
@@ -219,7 +220,7 @@ class STEPDetector:
                                 if flag[ii]:
                                     s2, cl_ind2, j2 = scores_list[ii]
                                     box2 = all_boxes[cl_ind2][j2]
-                                    if compute_box_iou(box, box2) > self.iou_t:
+                                    if compute_box_iou(box, box2) > global_iou_threshold:
                                         flag[ii] = 0
                                         temp[0].append(box2)
                                         temp[1].append(self._args.label_dict[cl_ind2])

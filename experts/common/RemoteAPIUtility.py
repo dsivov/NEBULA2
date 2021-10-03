@@ -51,19 +51,6 @@ class RemoteAPIUtility:
         
         return len(keys)
 
-    def scheduler_loop(self):
-        """
-        loops forever, waiting for movie tasks from arang.
-        @return: yields movie arago ID's.
-        """
-        while True:
-            # Signaling your code, that we have newly uploaded movie, frames are stored in S3.
-            # Returns movie_id in form: Movie/<xxxxx>
-            movies = self.nre.wait_for_change("Actors", "ClipScene") 
-            for movie in movies:
-                yield movie
-            self.nre.update_expert_status("Actors") #Update scheduler, set it to done status
-
     def get_movie_info(self, arango_id):
         """
         Get scenes for movie , you can find related scene element by comparing your start/stop and start/stop from database.
@@ -79,7 +66,9 @@ class RemoteAPIUtility:
             all_infos.append({
                 'arango_id': data['_id'],            # same as param
                 'description': data['description'],  # random identifier
-                'meta': data['meta'],                # movie file metadata
+                'fps': data['meta']['fps'],          # movie file metadata
+                'width': data['meta']['width'],
+                'height': data['meta']['height'],
                 'movie_id': data['movie_id'],        # random identifier
             })
 

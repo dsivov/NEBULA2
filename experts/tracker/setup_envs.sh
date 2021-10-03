@@ -16,7 +16,7 @@ function install_detectron {
     python -m pip install "torch>=1.7.0" "torchvision>=0.8.1" "opencv-python>=4.1.2"
 
     # download and install detectron
-    git clone https://github.com/facebookresearch/detectron2.git
+    git clone https://github.com/facebookresearch/detectron2.git  #TODO fork
     python -m pip install -e detectron2
 
     popd  # $DETECTRON_DIR
