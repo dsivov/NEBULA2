@@ -1,10 +1,13 @@
 from benchmark.lsmdc_processor import LSMDCProcessor
+from benchmark.clip_benchmark import NebulaVideoEvaluation
 import numpy as np
 from pipeline.pipeline_master import Pipeline
 import experts.tracker.autotracker as at
 import os
 import shutil
 import pickle
+
+from nebula_api.milvus_api import MilvusAPI
 
 class LSMDCSmallDataset:
     def __init__(self, db):
@@ -130,6 +133,57 @@ def run_step():
         df.to_pickle(os.path.join(res_folder, movie_filename[:-4] + '.pickle'))
 
 
+def create_triplets_from_clip():
+
+    # pegasus_stories = MilvusAPI('milvus', 'pegasus', 'nebula_dev', 640)
+    scene_graph = MilvusAPI('milvus', 'scene_graph_visual_genome', 'nebula_dev', 640)
+    result_folder = '/home/migakol/data/small_lsmdc_test/clip_results'
+
+    # go over all clip embeddings in the folder
+    for f in os.listdir(result_folder):
+        # Check if it's a file
+        if os.path.isfile(os.path.join(result_folder, f)):
+            # check if "clip" appears
+            if 'clip' in f:
+                with open(os.path.join(result_folder, f), 'rb') as handle:
+                    emb, _ = pickle.load(handle)
+                    paragraph_pegasus = []
+                    search_scene_graph = scene_graph.search_vector(1, emb[0].tolist()[0])
+                    paragraph_pegasus.append(search_scene_graph[0][1]['sentence'])
+                    print(f)
+                    print(search_scene_graph[0][1]['sentence'])
+
+
+
+    # for emb in embedding_list:
+    #     search_scene_graph = scene_graph.search_vector(1, emb.tolist()[0])
+    #     for distance, data in search_scene_graph:
+    #         paragraph_scene.append(data['sentence'])
+    #
+    #     search_scene_graph = pegasus_stories.search_vector(1, emb.tolist()[0])
+    #     for distance, data in search_scene_graph:
+    #         paragraph_pegasus.append(data['sentence'])
+
+
+def run_clip():
+    lsmdc_processor = LSMDCProcessor()
+    all_movies = lsmdc_processor.get_all_movies()
+    small_dataset = LSMDCSmallDataset(lsmdc_processor.db)
+    all_ids = small_dataset.get_all_ids()
+    clip_bench = NebulaVideoEvaluation()
+    base_folder = '/dataset/lsmdc/avi/'
+    thresholds = [0.7]
+    result_folder = '/home/migakol/data/small_lsmdc_test/clip_results'
+
+    for id in all_ids:
+        movie = all_movies[int(id['movie_id'])]
+        movie_name = base_folder + movie['path']
+        embedding_list, boundaries = clip_bench.create_clip_representation(movie_name, thresholds=thresholds)
+        save_name = movie['path'][movie['path'].find('/') + 1:-4] + '_clip.pickle'
+        with open(os.path.join(result_folder, save_name), 'wb') as handle:
+            pickle.dump([embedding_list, boundaries], handle)
+
+
 if __name__ == '__main__':
     print('Start examples')
     # Part 1 - choose 50 videos
@@ -138,5 +192,8 @@ if __name__ == '__main__':
     # run_tracker()
     # auxilary function that copies all relevant file to one folder
     # copy_files()
-    # Part 3 - run STEP on the files. Note that this part runs on a different computer
-    run_step()
+    # Part 3 - run STEP on the files. Note that this part runs on a different computer - GPU
+    # run_step()
+    # Part 4 - run CLIP on all the data
+    # run_clip()
+    create_triplets_from_clip()
