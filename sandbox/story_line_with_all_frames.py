@@ -181,7 +181,7 @@ class STORY_LINE_API:
             #             scene_graph_triplets_mdf.append(data['stage'])
             #             print(scene_graph_triplets_mdf, " ", distance)
             #             #stage_stories.append(data['sentence'])
-            search_stories = self.pegasus_stories.search_vector(3, vector)
+            search_stories = self.pegasus_stories.search_vector(100, vector)
             for distance, data in search_stories:
                 if data['stage'] not in scene_stories_mdf:
                     if distance > 0.42:
@@ -216,7 +216,7 @@ class STORY_LINE_API:
 
 def main():
     properties = {
-        'openie.affinity_probability_cap': 3 / 3,
+        'openie.affinity_probability_cap': 1 / 3,
         'resolve_coref': True,
     }
     story_line = STORY_LINE_API()
