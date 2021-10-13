@@ -1,7 +1,7 @@
 from django import template
 import re
 from urllib.parse import quote_plus
-from config.config import NEBULA_CONF
+from config_nebula.config import NEBULA_CONF
 
 register = template.Library()
 conf = NEBULA_CONF()
