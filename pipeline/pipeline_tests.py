@@ -172,16 +172,75 @@ def run_clip():
     all_ids = small_dataset.get_all_ids()
     clip_bench = NebulaVideoEvaluation()
     base_folder = '/dataset/lsmdc/avi/'
-    thresholds = [0.7]
+    thresholds = [0.8]
     result_folder = '/home/migakol/data/small_lsmdc_test/clip_results'
 
+    scene_graph = MilvusAPI('milvus', 'scene_graph_visual_genome', 'nebula_dev', 640)
+
+    paragraph_pegasus = []
     for id in all_ids:
         movie = all_movies[int(id['movie_id'])]
         movie_name = base_folder + movie['path']
-        embedding_list, boundaries = clip_bench.create_clip_representation(movie_name, thresholds=thresholds)
+        print(movie['path'])
+        # if movie_name != '/dataset/lsmdc/avi/1010_TITANIC/1010_TITANIC_00.41.32.072-00.41.40.196.avi':
+        #     continue
+        embedding_list, boundaries = clip_bench.create_clip_representation(movie_name, thresholds=thresholds, method='single')
         save_name = movie['path'][movie['path'].find('/') + 1:-4] + '_clip.pickle'
         with open(os.path.join(result_folder, save_name), 'wb') as handle:
             pickle.dump([embedding_list, boundaries], handle)
+
+        paragraph_pegasus.append(movie['path'])
+        for k in range(embedding_list[0].shape[0]):
+            emb = embedding_list[0][k, :]
+            search_scene_graph = scene_graph.search_vector(20, emb.tolist())
+            paragraph_pegasus.append('SECTION ' + str(boundaries[0][k]))
+            for x in range(20):
+                paragraph_pegasus.append(str(search_scene_graph[x][0]) + '   ' + search_scene_graph[x][1]['sentence'])
+            print(search_scene_graph[0][1]['sentence'])
+
+        save_name = movie['path'][movie['path'].find('/') + 1:-4] + '_text_single.pickle'
+        handle = open(os.path.join(result_folder, save_name), 'wb')
+        pickle.dump(paragraph_pegasus, handle)
+
+    print(paragraph_pegasus)
+
+    text_results = 'all_text_single.pickle'
+    with open(os.path.join(result_folder, text_results), 'wb') as handle:
+        pickle.dump(paragraph_pegasus, handle)
+
+    print('Working on median')
+    paragraph_pegasus = []
+    for id in all_ids:
+        movie = all_movies[int(id['movie_id'])]
+        movie_name = base_folder + movie['path']
+        print(movie['path'])
+        # if movie_name != '/dataset/lsmdc/avi/1010_TITANIC/1010_TITANIC_00.41.32.072-00.41.40.196.avi':
+        #     continue
+        embedding_list, boundaries = clip_bench.create_clip_representation(movie_name, thresholds=thresholds,
+                                                                           method='median')
+        save_name = movie['path'][movie['path'].find('/') + 1:-4] + '_clip.pickle'
+        with open(os.path.join(result_folder, save_name), 'wb') as handle:
+            pickle.dump([embedding_list, boundaries], handle)
+
+        paragraph_pegasus.append(movie['path'])
+        for k in range(embedding_list[0].shape[0]):
+            emb = embedding_list[0][k, :]
+            search_scene_graph = scene_graph.search_vector(20, emb.tolist())
+            paragraph_pegasus.append('SECTION ' + str(boundaries[0][k]))
+            for x in range(20):
+                paragraph_pegasus.append(str(search_scene_graph[x][0]) + '   ' + search_scene_graph[x][1]['sentence'])
+            print(search_scene_graph[0][1]['sentence'])
+
+        save_name = movie['path'][movie['path'].find('/') + 1:-4] + '_text_median.pickle'
+        handle = open(os.path.join(result_folder, save_name), 'wb')
+        pickle.dump(paragraph_pegasus, handle)
+
+    print(paragraph_pegasus)
+
+    text_results = 'all_text_median.pickle'
+    with open(os.path.join(result_folder, text_results), 'wb') as handle:
+        pickle.dump(paragraph_pegasus, handle)
+
 
 
 if __name__ == '__main__':
@@ -195,5 +254,5 @@ if __name__ == '__main__':
     # Part 3 - run STEP on the files. Note that this part runs on a different computer - GPU
     # run_step()
     # Part 4 - run CLIP on all the data
-    # run_clip()
-    create_triplets_from_clip()
+    run_clip()
+    # create_triplets_from_clip()

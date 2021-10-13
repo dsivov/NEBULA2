@@ -68,15 +68,39 @@ class NebulaVideoEvaluation:
         :param start_frame: we are testing the movie only between frames start_frame and end_frame
         :param end_frame:
         :return: return the list of 1s and 0s and from start_frame (including) until end_frame (including)
+        0 == BAD
         """
         cap = cv.VideoCapture(movie_name)
         ret, frame = cap.read()
         frame_num = 0
         ret_list = []
+        values = []
         while cap.isOpened() and ret:
             if frame_num >= start_frame and frame_num <= end_frame:
                 gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-                fm = cv.Laplacian(gray, cv.CV_64F).var()
+                dst = cv.GaussianBlur(gray, (3, 3), cv.BORDER_DEFAULT)
+                fm = cv.Laplacian(dst, cv.CV_64F).var()
+                values.append(fm)
+                if fm > blur_threshold:
+                    ret_list.append(1)
+                else:
+                    ret_list.append(0)
+            frame_num = frame_num + 1
+            ret, frame = cap.read()
+
+        blur_threshold = np.median(values) / 1.25
+
+        cap = cv.VideoCapture(movie_name)
+        ret, frame = cap.read()
+        frame_num = 0
+        ret_list = []
+        values = []
+        while cap.isOpened() and ret:
+            if frame_num >= start_frame and frame_num <= end_frame:
+                gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+                dst = cv.GaussianBlur(gray, (3, 3), cv.BORDER_DEFAULT)
+                fm = cv.Laplacian(dst, cv.CV_64F).var()
+                values.append(fm)
                 if fm > blur_threshold:
                     ret_list.append(1)
                 else:
@@ -123,7 +147,7 @@ class NebulaVideoEvaluation:
             if frame is not None:
                 frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
 
-        return embedding_array
+        return embedding_array, fps
 
 
     def encode_text(self, text):
@@ -136,7 +160,11 @@ class NebulaVideoEvaluation:
         # image = self.preprocess(Image.open("CLIP.png")).unsqueeze(0).to(self.device)
         # sentences = MilvusAPI('lables', 'nebula_dev')
 
-        embedding_array = self.get_embedding_difs(movie_name, start_time, end_time)
+        embedding_array, fps = self.get_embedding_difs(movie_name, start_time, end_time)
+
+        start_frame = start_time / fps
+        end_frame = end_time / fps
+        blurred = self.mark_blurred_frames(movie_name, start_frame, end_frame, blur_threshold=40)
 
         boundaries = []
         good_frame_per = []
@@ -149,14 +177,16 @@ class NebulaVideoEvaluation:
             boundaries.append(new_bounds)
             avg_embeddings = np.zeros((0, self.model_res))
             for bound_tuple in new_bounds:
+                good_ind = np.where(blurred[bound_tuple[0]:bound_tuple[1] + 1] == 1)[0] + bound_tuple[0]
+                if len(good_ind) == 0:
+                    continue
                 if method == 'median':
-                    represent_emb = np.median(embedding_array[bound_tuple[0]:bound_tuple[1] + 1, :],
-                                              axis=0).reshape(1, self.model_res)
+                    represent_emb = np.median(embedding_array[good_ind, :], axis=0).reshape(1, self.model_res)
                 elif method == 'average':
-                    represent_emb = np.mean(embedding_array[bound_tuple[0]:bound_tuple[1] + 1, :],
-                                              axis=0).reshape(1, self.model_res)
+                    represent_emb = np.mean(embedding_array[good_ind, :], axis=0).reshape(1, self.model_res)
                 elif method == 'single':
-                    right_ind = int((bound_tuple[0] + bound_tuple[1] + 1) / 2)
+                    # right_ind = int((bound_tuple[0] + bound_tuple[1] + 1) / 2)
+                    right_ind = good_ind[int(len(good_ind) / 2)]
                     represent_emb = (embedding_array[right_ind, :]).reshape(1, self.model_res)
                 else:
                     return None, None
