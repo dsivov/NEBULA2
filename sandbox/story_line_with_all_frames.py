@@ -46,7 +46,7 @@ class STORY_LINE_API:
         nebula_movies={}
         #query = 'FOR doc IN Movies FILTER doc.split == \'0\' AND doc.splits_total == \'30\' RETURN doc'
         #query = 'FOR doc IN Movies FILTER doc.status != "complited" RETURN doc'
-        query = 'FOR doc IN Movies FILTER doc._id == \'Movies/114206397\' RETURN doc'
+        query = 'FOR doc IN Movies FILTER doc._id == \'Movies/114208064\' RETURN doc'
         #query = 'FOR doc IN Movies FILTER doc._id == \'Movies/17342682\' RETURN doc'
         #query = 'FOR doc IN Movies FILTER doc._id == \'Movies/12911567\' RETURN doc'
 
@@ -104,10 +104,13 @@ class STORY_LINE_API:
         cursor = self.db.aql.execute(o_query, bind_vars=bind_vars)
         for data in cursor:
             if str(frame) in data['bboxes']:
-                _objects.append(data['description'])
-                bboxes.append(data['bboxes'][str(frame)])
-                #print("Frame: ", frame, " ", data['description'], "->", data['bboxes'][str(frame)])
-        
+                if data['scores'][str(frame)] > 0.75:
+                    _objects.append(data['description'])
+                    bboxes.append(data['bboxes'][str(frame)])
+                    # print("Frame: ", frame, " ", data['description'], "->", data['bboxes'][str(
+                    #     frame)], " Score: ", data['scores'][str(frame)])
+        print(_objects)
+        print(bboxes)
         return(_objects, bboxes)
 
     def insert_scene_to_storyline(self, file_name,  movie_id, arango_id ,scene_element, mdf, description, start, stop, sentences, triplets):
@@ -139,7 +142,6 @@ class STORY_LINE_API:
         if (fn):
             video_file = Path(fn)
             file_name = fn
-            print(file_name)
             if video_file.is_file():
                 #Simple MDF search - first, start and middle - to be enchanced 
                 #print("Scene: ", scene_element )
@@ -147,15 +149,17 @@ class STORY_LINE_API:
                 feature_mdfs = []
                 feature_obj = []
                 feature_bbox = []
+                feature_data = []
                 for mdf in range(start_frame,stop_frame):
-                    #print("Processing frame ", mdf)
+                    #print("Processing frame ----------->", mdf)
                     cap.set(cv2.CAP_PROP_POS_FRAMES, mdf)
                     ret, frame_ = cap.read() # Read the frame
+                    #cv2.imwrite('test/full_{}.png'.format(mdf), frame_)
                     objects, bboxes = self.get_movie_tracker_data(movie_id, scene_element, mdf)
                     for o,b in zip(objects, bboxes):
                         x,y,w,h = b
                         crop = frame_[y:y+h, x:x+w]
-                        cv2.imwrite('test/test_{}_{}.png'.format(o, mdf), crop)
+                        cv2.imwrite('test/{}_{}.png'.format(mdf, o), crop)
 
                         if not ret:
                             print("File not found")
@@ -164,18 +168,18 @@ class STORY_LINE_API:
                             feature_obj.append(o)
                             feature_bbox.append(b)
                             feature_mdfs.append(feature_t)                 
-                    feature_data = {'video_path': file_name,
-                                    'start_frame_id': start_frame,
-                                    'stop_frame_id': stop_frame,
-                                    'scene_id': scene_element,
-                                    #'frame_id': mdf,
-                                    'mdfs': mdfs,
-                                    'movie_id' : movie_id,
-                                    'arango_id' : arango_id,
-                                    'bboxes': feature_bbox,
-                                    'objects': feature_obj
-                                    #'frame': frame_.tolist()
-                                    }
+                            feature_data.append({'video_path': file_name,
+                                            'start_frame_id': start_frame,
+                                            'stop_frame_id': stop_frame,
+                                            'scene_id': scene_element,
+                                            'frame_id': mdf,
+                                            'mdfs': mdfs,
+                                            'movie_id' : movie_id,
+                                            'arango_id' : arango_id,
+                                            'bboxes': b,
+                                            'objects': o
+                                            #'frame': frame_.tolist()
+                                            })
                 self._add_image_features(feature_mdfs, feature_data, client)              
                 cap.release()
                 cv2.destroyAllWindows()
@@ -200,22 +204,24 @@ class STORY_LINE_API:
         subjects = []
         relations = []
         #print("FET. LEN: ", len(new_features_mdfs))
-        for obj, new_features in zip(feature_video_map['objects'], new_features_mdfs):
+        #print("Processing frame: ", feature_video_map['frame_id'])
+        for obj, new_features in zip(feature_video_map, new_features_mdfs):
             scene_graph_triplets_mdf = []
             scene_stories_mdf = []
             new_features /= new_features.norm(dim=-1, keepdim=True)
             vector = new_features.tolist()[0]
-            search_scene_graph = self.scene_graph.search_vector(10, vector)
+            search_scene_graph = self.scene_graph.search_vector(20, vector)
+            print("Processing frame: ", obj['frame_id'], " Detected Object: ", obj['objects'])
             for distance, data in search_scene_graph:
                 #if data['stage'] not in scene_graph_triplets_mdf:
-                if distance > 0.40:
+                if distance > 0.39:
                         #scene_graph_triplets_mdf.append(data['stage'])
                     #print(data['sentence'], "-----> ", distance)
                     filtered_text = remove_stopwords(
                             data['sentence'].lower())
                     #print(filtered_text)
                     for triple in client.annotate(str(filtered_text)):
-                        print("Object: ", obj, " S: ",triple, "----->", distance)
+                        print("Source->TRIPLET: ",triple, "----->", distance)
                         #if triple['object'] not in objects: 
                         objects.append(triple['object'])
                         #if triple['subject'] not in subjects:
@@ -231,7 +237,7 @@ class STORY_LINE_API:
                             data['sentence'].lower())
                         #print(filtered_text)
                         for triple in client.annotate(str(filtered_text)):
-                            print("Object: ", obj, " T: ",triple, "----->", distance)
+                            print("Source->PEGASUS: ",triple, "----->", distance)
                             objects.append(triple['object'])
                             #if triple['subject'] not in subjects:
                             subjects.append(triple['subject'])   
@@ -250,8 +256,11 @@ class STORY_LINE_API:
         subjects_map = dict(sorted(subjects_map.items(), key=lambda item: item[1], reverse=True))
         objects_map = dict(sorted(objects_map.items(), key=lambda item: item[1], reverse= True))
         relations_map = dict(sorted(relations_map.items(), key=lambda item: item[1], reverse=True))
+        print("Proposed subjects:")
         print(subjects_map)
+        print("Proposed objects:")
         print(objects_map)
+        print("Proposed lations:")
         print(relations_map)
         
 
@@ -265,24 +274,24 @@ def main():
     }
     story_line = STORY_LINE_API()
     all_movies = story_line.get_all_movies_meta()
-    with StanfordOpenIE(properties=properties) as client:
-        for movie in all_movies.values():
-            print("Processing Movie: ", movie)
-            for i, scene_element in enumerate(movie['scene_elements']):
-                print("Scene Element: ", i)
-                file_name = movie['full_path']
-                movie_id = movie['movie_id']
-                arango_id = movie['_id']
-                mdfs = movie['mdfs'][i]
-                start_frame = scene_element[0]
-                stop_frame = scene_element[1]
-                stage = i
-                story_line.create_story_line(file_name, movie_id, arango_id, stage, start_frame, stop_frame, mdfs, client)
-            obj, act = story_line.get_movie_expert_data(arango_id, stage)
-            print("Tracker: ")
-            print(obj)
-            print("STEP ")
-            print(act)
+    client = StanfordOpenIE(properties=properties)
+    for movie in all_movies.values():
+        print("Processing Movie: ", movie['_id'], "->", movie['movie_name'])
+        for i, scene_element in enumerate(movie['scene_elements']):
+            print("Scene Element: ", i)
+            file_name = movie['full_path']
+            movie_id = movie['movie_id']
+            arango_id = movie['_id']
+            mdfs = movie['mdfs'][i]
+            start_frame = scene_element[0]
+            stop_frame = scene_element[1]
+            stage = i
+            story_line.create_story_line(file_name, movie_id, arango_id, stage, start_frame, stop_frame, mdfs, client)
+        obj, act = story_line.get_movie_expert_data(arango_id, stage)
+        print("Tracker: ")
+        print(obj)
+        print("STEP ")
+        print(act)
 if __name__ == "__main__":
     main()
 
