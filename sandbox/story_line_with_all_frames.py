@@ -28,7 +28,9 @@ class STORY_LINE_API:
         logging.basicConfig(format='%(asctime)s - %(message)s',
                             level=logging.INFO)
 
-        #self.nlp = spacy.load('en_core_web_sm', disable=['parser', 'ner'])
+        self.nlp = spacy.load('en_core_web_sm')
+        #self.excluded_tags = {"NOUN", "VERB", "ADJ", "ADV", "ADP", "PROPN"}
+        self.excluded_tags = {"VERB", "ADV", "ADP", "PROPN"}
         # Choose device and load the chosen model
         self.collection_name = 'nebula_clip'
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -44,7 +46,7 @@ class STORY_LINE_API:
         nebula_movies={}
         #query = 'FOR doc IN Movies FILTER doc.split == \'0\' AND doc.splits_total == \'30\' RETURN doc'
         #query = 'FOR doc IN Movies FILTER doc.status != "complited" RETURN doc'
-        query = 'FOR doc IN Movies FILTER doc._id == \'Movies/114208149\' RETURN doc'
+        query = 'FOR doc IN Movies FILTER doc._id == \'Movies/114206397\' RETURN doc'
         #query = 'FOR doc IN Movies FILTER doc._id == \'Movies/17342682\' RETURN doc'
         #query = 'FOR doc IN Movies FILTER doc._id == \'Movies/12911567\' RETURN doc'
 
@@ -73,7 +75,7 @@ class STORY_LINE_API:
     def get_movie_expert_data(self, movie_id, scene_element):
         objects = []
         actions = []
-        print("MMMMM", movie_id)
+
         o_query = 'FOR doc IN Nodes FILTER doc.bboxes != null AND doc.arango_id == "{}" AND doc.class == "Object" RETURN doc'.format(
             movie_id)
         a_query = 'FOR doc IN Nodes FILTER doc.arango_id == "{}" AND doc.class == "Actions"  RETURN doc'.format(
@@ -88,6 +90,25 @@ class STORY_LINE_API:
             if data['description'] not in actions:
                 actions.append(data['description'])
         return(objects,actions)
+
+    def get_movie_tracker_data(self, movie_id, scene_element, frame):
+        _objects = []
+        bboxes = []
+        o_query = 'FOR doc IN Nodes FILTER doc.bboxes != null AND doc.arango_id == \
+            @arango_id AND doc.scene_element == @scene_element AND doc.class == "Object" RETURN doc'
+        bind_vars = {
+            'arango_id': movie_id,
+            'scene_element': int(scene_element)
+        }
+        #print(o_query)
+        cursor = self.db.aql.execute(o_query, bind_vars=bind_vars)
+        for data in cursor:
+            if str(frame) in data['bboxes']:
+                _objects.append(data['description'])
+                bboxes.append(data['bboxes'][str(frame)])
+                #print("Frame: ", frame, " ", data['description'], "->", data['bboxes'][str(frame)])
+        
+        return(_objects, bboxes)
 
     def insert_scene_to_storyline(self, file_name,  movie_id, arango_id ,scene_element, mdf, description, start, stop, sentences, triplets):
         query = 'UPSERT { movie_id: @movie_id, scene_element: @scene_element} INSERT  \
@@ -124,27 +145,37 @@ class STORY_LINE_API:
                 #print("Scene: ", scene_element )
                 cap = cv2.VideoCapture(fn)
                 feature_mdfs = []
+                feature_obj = []
+                feature_bbox = []
                 for mdf in range(start_frame,stop_frame):
                     #print("Processing frame ", mdf)
                     cap.set(cv2.CAP_PROP_POS_FRAMES, mdf)
                     ret, frame_ = cap.read() # Read the frame
-                    
-                    
-                    if not ret:
-                        print("File not found")
-                    else:
-                        feature_t = self._calculate_images_features(frame_)
-                        feature_mdfs.append(feature_t)                 
-                feature_data = {'video_path': file_name,
-                                'start_frame_id': start_frame,
-                                'stop_frame_id': stop_frame,
-                                'scene_id': scene_element,
-                                #'frame_id': mdf,
-                                'mdfs': mdfs,
-                                'movie_id' : movie_id,
-                                'arango_id' : arango_id
-                                #'frame': frame_.tolist()
-                                }
+                    objects, bboxes = self.get_movie_tracker_data(movie_id, scene_element, mdf)
+                    for o,b in zip(objects, bboxes):
+                        x,y,w,h = b
+                        crop = frame_[y:y+h, x:x+w]
+                        cv2.imwrite('test/test_{}_{}.png'.format(o, mdf), crop)
+
+                        if not ret:
+                            print("File not found")
+                        else:
+                            feature_t = self._calculate_images_features(crop)
+                            feature_obj.append(o)
+                            feature_bbox.append(b)
+                            feature_mdfs.append(feature_t)                 
+                    feature_data = {'video_path': file_name,
+                                    'start_frame_id': start_frame,
+                                    'stop_frame_id': stop_frame,
+                                    'scene_id': scene_element,
+                                    #'frame_id': mdf,
+                                    'mdfs': mdfs,
+                                    'movie_id' : movie_id,
+                                    'arango_id' : arango_id,
+                                    'bboxes': feature_bbox,
+                                    'objects': feature_obj
+                                    #'frame': frame_.tolist()
+                                    }
                 self._add_image_features(feature_mdfs, feature_data, client)              
                 cap.release()
                 cv2.destroyAllWindows()
@@ -164,53 +195,66 @@ class STORY_LINE_API:
         return image_features
 
     def _add_image_features(self, new_features_mdfs, feature_video_map, client):
-        
+        from collections import Counter
         objects = []
         subjects = []
         relations = []
         #print("FET. LEN: ", len(new_features_mdfs))
-        for i, new_features in enumerate(new_features_mdfs):
+        for obj, new_features in zip(feature_video_map['objects'], new_features_mdfs):
             scene_graph_triplets_mdf = []
             scene_stories_mdf = []
             new_features /= new_features.norm(dim=-1, keepdim=True)
             vector = new_features.tolist()[0]
-            # search_scene_graph = self.scene_graph.search_vector(3, vector)
-            # for distance, data in search_scene_graph:
-            #     if data['stage'] not in scene_graph_triplets_mdf:
-            #         if distance > 0.39:
-            #             scene_graph_triplets_mdf.append(data['stage'])
-            #             print(scene_graph_triplets_mdf, " ", distance)
-            #             #stage_stories.append(data['sentence'])
-            search_stories = self.pegasus_stories.search_vector(100, vector)
+            search_scene_graph = self.scene_graph.search_vector(10, vector)
+            for distance, data in search_scene_graph:
+                #if data['stage'] not in scene_graph_triplets_mdf:
+                if distance > 0.40:
+                        #scene_graph_triplets_mdf.append(data['stage'])
+                    #print(data['sentence'], "-----> ", distance)
+                    filtered_text = remove_stopwords(
+                            data['sentence'].lower())
+                    #print(filtered_text)
+                    for triple in client.annotate(str(filtered_text)):
+                        print("Object: ", obj, " S: ",triple, "----->", distance)
+                        #if triple['object'] not in objects: 
+                        objects.append(triple['object'])
+                        #if triple['subject'] not in subjects:
+                        subjects.append(triple['subject'])   
+                        #if triple['relation'] not in relations:
+                        relations.append(triple['relation'])
+                            #stage_stories.append(data['sentence'])
+            search_stories = self.pegasus_stories.search_vector(10, vector)
             for distance, data in search_stories:
                 if data['stage'] not in scene_stories_mdf:
-                    if distance > 0.42:
+                    if distance > 0.40:
                         filtered_text = remove_stopwords(
                             data['sentence'].lower())
                         #print(filtered_text)
                         for triple in client.annotate(str(filtered_text)):
-                            #print(triple, "----->", distance)
-                            if triple['object'] not in objects: 
-                                objects.append(triple['object'])
-                            if triple['subject'] not in subjects:
-                                subjects.append(triple['subject'])   
-                            if triple['relation'] not in relations:
-                                relations.append(triple['relation'])
+                            print("Object: ", obj, " T: ",triple, "----->", distance)
+                            objects.append(triple['object'])
+                            #if triple['subject'] not in subjects:
+                            subjects.append(triple['subject'])   
+                            #if triple['relation'] not in relations:
+                            relations.append(triple['relation'])
        
-        print("Subjects: ") 
-        print(subjects)
-        print("Objects: ")
-        print(objects)
-        print("Possible relations: ")
-        print(relations)
-            # print("Story: ", scene_stories)
-            # print("Scene; ", scene_graph_triplets)
-            #print("Then...............")
-        #Insert Meta into Arango StoryLine Here
-        # self.insert_scene_to_storyline(feature_video_map['video_path'], feature_video_map['arango_id'], \
-        #     feature_video_map['movie_id'],feature_video_map['scene_id'], \
-        #     feature_video_map['mdfs'], "", feature_video_map['start_frame_id'], \
-        #     feature_video_map['stop_frame_id'], scene_stories, scene_graph_triplets)
+        # print("Subjects: ") 
+        # print(subjects)
+        # print("Objects: ")
+        # print(objects)
+        # print("Possible relations: ")
+        # print(relations)
+        subjects_map = Counter(subjects)
+        objects_map = Counter(objects)
+        relations_map = Counter(relations)
+        subjects_map = dict(sorted(subjects_map.items(), key=lambda item: item[1], reverse=True))
+        objects_map = dict(sorted(objects_map.items(), key=lambda item: item[1], reverse= True))
+        relations_map = dict(sorted(relations_map.items(), key=lambda item: item[1], reverse=True))
+        print(subjects_map)
+        print(objects_map)
+        print(relations_map)
+        
+
         
 
 
@@ -225,6 +269,7 @@ def main():
         for movie in all_movies.values():
             print("Processing Movie: ", movie)
             for i, scene_element in enumerate(movie['scene_elements']):
+                print("Scene Element: ", i)
                 file_name = movie['full_path']
                 movie_id = movie['movie_id']
                 arango_id = movie['_id']
@@ -234,7 +279,6 @@ def main():
                 stage = i
                 story_line.create_story_line(file_name, movie_id, arango_id, stage, start_frame, stop_frame, mdfs, client)
             obj, act = story_line.get_movie_expert_data(arango_id, stage)
-            print("Scene Element: ", stage)
             print("Tracker: ")
             print(obj)
             print("STEP ")
