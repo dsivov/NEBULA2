@@ -13,7 +13,7 @@ from pathlib import Path
 
 from PIL import Image
 import numpy as np
-from patchify import patchify
+# from patchify import patchify
 from nebula_api.milvus_api import MilvusAPI
 from nebula_api.nebula_enrichment_api import NRE_API
 
