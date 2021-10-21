@@ -46,7 +46,7 @@ class STORY_LINE_API:
         nebula_movies={}
         #query = 'FOR doc IN Movies FILTER doc.split == \'0\' AND doc.splits_total == \'30\' RETURN doc'
         #query = 'FOR doc IN Movies FILTER doc.status != "complited" RETURN doc'
-        query = 'FOR doc IN Movies FILTER doc._id == \'Movies/114208064\' RETURN doc'
+        query = 'FOR doc IN Movies FILTER doc._id == \'Movies/114208744\' RETURN doc'
         #query = 'FOR doc IN Movies FILTER doc._id == \'Movies/17342682\' RETURN doc'
         #query = 'FOR doc IN Movies FILTER doc._id == \'Movies/12911567\' RETURN doc'
 
@@ -104,13 +104,12 @@ class STORY_LINE_API:
         cursor = self.db.aql.execute(o_query, bind_vars=bind_vars)
         for data in cursor:
             if str(frame) in data['bboxes']:
-                if data['scores'][str(frame)] > 0.75:
+                if data['scores'][str(frame)] > 0.60:
                     _objects.append(data['description'])
                     bboxes.append(data['bboxes'][str(frame)])
                     # print("Frame: ", frame, " ", data['description'], "->", data['bboxes'][str(
                     #     frame)], " Score: ", data['scores'][str(frame)])
-        print(_objects)
-        print(bboxes)
+       
         return(_objects, bboxes)
 
     def insert_scene_to_storyline(self, file_name,  movie_id, arango_id ,scene_element, mdf, description, start, stop, sentences, triplets):
@@ -158,7 +157,7 @@ class STORY_LINE_API:
                     objects, bboxes = self.get_movie_tracker_data(movie_id, scene_element, mdf)
                     for o,b in zip(objects, bboxes):
                         x,y,w,h = b
-                        crop = frame_[y:y+h, x:x+w]
+                        crop = frame_[y:h, x:w]
                         cv2.imwrite('test/{}_{}.png'.format(mdf, o), crop)
 
                         if not ret:
@@ -210,39 +209,45 @@ class STORY_LINE_API:
             scene_stories_mdf = []
             new_features /= new_features.norm(dim=-1, keepdim=True)
             vector = new_features.tolist()[0]
-            search_scene_graph = self.scene_graph.search_vector(20, vector)
-            print("Processing frame: ", obj['frame_id'], " Detected Object: ", obj['objects'])
+            search_scene_graph = self.scene_graph.search_vector(100, vector)
+            #print("Processing frame: ", obj['frame_id'], " Detected Object: ", obj['objects'])
             for distance, data in search_scene_graph:
                 #if data['stage'] not in scene_graph_triplets_mdf:
-                if distance > 0.39:
+                if distance > 0.40:
                         #scene_graph_triplets_mdf.append(data['stage'])
                     #print(data['sentence'], "-----> ", distance)
                     filtered_text = remove_stopwords(
                             data['sentence'].lower())
                     #print(filtered_text)
                     for triple in client.annotate(str(filtered_text)):
-                        print("Source->TRIPLET: ",triple, "----->", distance)
+                        #print("Source->TRIPLET: ",triple, "----->", distance)
                         #if triple['object'] not in objects: 
-                        objects.append(triple['object'])
+                        objects.append(obj['objects']+":"+triple['object'])
                         #if triple['subject'] not in subjects:
-                        subjects.append(triple['subject'])   
+                        subjects.append(obj['objects']+":"+triple['subject'])
                         #if triple['relation'] not in relations:
-                        relations.append(triple['relation'])
+                        ts = self.nlp(triple['relation'])
+                        for token in ts:
+                            relations.append(token.lemma_)
                             #stage_stories.append(data['sentence'])
-            search_stories = self.pegasus_stories.search_vector(10, vector)
+            search_stories = self.pegasus_stories.search_vector(100, vector)
             for distance, data in search_stories:
                 if data['stage'] not in scene_stories_mdf:
-                    if distance > 0.40:
+                    if distance > 0.42:
                         filtered_text = remove_stopwords(
                             data['sentence'].lower())
                         #print(filtered_text)
                         for triple in client.annotate(str(filtered_text)):
-                            print("Source->PEGASUS: ",triple, "----->", distance)
-                            objects.append(triple['object'])
+                            #print("Source->PEGASUS: ",triple, "----->", distance)
+                            objects.append(
+                                obj['objects']+":"+triple['object'])
                             #if triple['subject'] not in subjects:
-                            subjects.append(triple['subject'])   
+                            subjects.append(
+                                obj['objects']+":"+triple['subject'])
                             #if triple['relation'] not in relations:
-                            relations.append(triple['relation'])
+                            ts = self.nlp(triple['relation'])
+                            for token in ts:
+                                relations.append(token.lemma_)
        
         # print("Subjects: ") 
         # print(subjects)
@@ -256,12 +261,19 @@ class STORY_LINE_API:
         subjects_map = dict(sorted(subjects_map.items(), key=lambda item: item[1], reverse=True))
         objects_map = dict(sorted(objects_map.items(), key=lambda item: item[1], reverse= True))
         relations_map = dict(sorted(relations_map.items(), key=lambda item: item[1], reverse=True))
-        print("Proposed subjects:")
-        print(subjects_map)
-        print("Proposed objects:")
-        print(objects_map)
-        print("Proposed lations:")
-        print(relations_map)
+        # print("Proposed subjects:")
+        # print(subjects_map)
+        # print("Proposed objects:")
+        # print(objects_map)
+        # print("Proposed lations:")
+        # print(relations_map)
+        for subj in subjects_map:
+            if subjects_map[subj] > 28:
+                for rel in relations_map:
+                    if relations_map[rel] > 28:
+                        for obj in objects_map:
+                             if objects_map[obj] > 28:
+                                print(subj+"--->"+rel+"--->"+obj)
         
 
         
