@@ -165,6 +165,31 @@ def create_triplets_from_clip():
     #         paragraph_pegasus.append(data['sentence'])
 
 
+def get_text_img_score(text, clip_bench, img_emb):
+    text_emb = clip_bench.encode_text(text)
+    text_emb = text_emb / np.linalg.norm(text_emb)
+    return np.sum((text_emb * img_emb))
+
+def test_clip_single_image():
+    import cv2 as cv
+    from PIL import Image
+    clip_bench = NebulaVideoEvaluation()
+    img_name = '/home/migakol/data/img1.jpg'
+
+    frame = cv.imread(img_name)
+    img = clip_bench.preprocess(Image.fromarray(frame)).unsqueeze(0).to('cpu')
+    img_emb = clip_bench.model.encode_image(img).detach().numpy()
+    img_emb = img_emb / np.linalg.norm(img_emb)
+
+    text = ''
+    text_emb = clip_bench.encode_text(text)
+    text_emb = text_emb / np.linalg.norm(text_emb)
+
+
+
+
+    print(1)
+
 def run_clip():
     lsmdc_processor = LSMDCProcessor()
     all_movies = lsmdc_processor.get_all_movies()
@@ -186,8 +211,8 @@ def run_clip():
         #     continue
         embedding_list, boundaries = clip_bench.create_clip_representation(movie_name, thresholds=thresholds, method='single')
         save_name = movie['path'][movie['path'].find('/') + 1:-4] + '_clip.pickle'
-        with open(os.path.join(result_folder, save_name), 'wb') as handle:
-            pickle.dump([embedding_list, boundaries], handle)
+        # with open(os.path.join(result_folder, save_name), 'wb') as handle:
+        #     pickle.dump([embedding_list, boundaries], handle)
 
         paragraph_pegasus.append(movie['path'])
         for k in range(embedding_list[0].shape[0]):
@@ -254,5 +279,6 @@ if __name__ == '__main__':
     # Part 3 - run STEP on the files. Note that this part runs on a different computer - GPU
     # run_step()
     # Part 4 - run CLIP on all the data
+    # test_clip_single_image()
     run_clip()
     # create_triplets_from_clip()

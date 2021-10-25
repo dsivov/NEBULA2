@@ -118,7 +118,7 @@ class EmbeddingsLoader():
         return(embeddings)
 
     def clip_text_encoder(self, _text):
-        text_inputs = torch.cat([clip.tokenize(_text)]).to(self.device)
+        text_inputs = torch.cat([c(_text)]).to(self.device)
         with torch.no_grad():
             text_features = self.clip.encode_text(text_inputs)
             text_features /= text_features.norm(dim=-1, keepdim=True)
