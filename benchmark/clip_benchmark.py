@@ -163,8 +163,8 @@ class NebulaVideoEvaluation:
 
         embedding_array, fps = self.get_embedding_difs(movie_name, start_time, end_time)
 
-        start_frame = start_time / fps
-        end_frame = end_time / fps
+        start_frame = start_time * fps
+        end_frame = end_time * fps
         blurred = self.mark_blurred_frames(movie_name, start_frame, end_frame, blur_threshold=40)
 
         boundaries = []

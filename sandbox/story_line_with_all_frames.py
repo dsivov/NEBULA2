@@ -291,8 +291,10 @@ class STORY_LINE_API:
         
         start = int(feature_video_map[0]['start_frame_id']) / 29
         stop = int(feature_video_map[0]['stop_frame_id']) / 29
-        thresholds = [0.6, 0.7, 0.8]
-        embedding_list, boundaries = self.clip_bench.create_clip_representation("1010_TITANIC_00_41_32_072-00_41_40_196.mp4",
+        thresholds = [0.8]
+        movie_name = '/tmp/1010_TITANIC_00_41_32_072-00_41_40_196.mp4'
+        # movie_name = '/dataset/lsmdc/avi/1024_Identity_Thief/1024_Identity_Thief_00.01.43.655-00.01.47.807.avi'
+        embedding_list, boundaries = self.clip_bench.create_clip_representation(movie_name,
                                                                                 start_time=start, end_time=stop, thresholds=thresholds, method='average')
         print(start, " ", stop)
         subjects_map = Counter(subjects)
