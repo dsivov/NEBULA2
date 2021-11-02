@@ -1,5 +1,6 @@
 from benchmark.lsmdc_processor import LSMDCProcessor
 from benchmark.clip_benchmark import NebulaVideoEvaluation
+from benchmark.location_list import LocationList
 import numpy as np
 from pipeline.pipeline_master import Pipeline
 import experts.tracker.autotracker as at
@@ -170,6 +171,13 @@ def get_text_img_score(text, clip_bench, img_emb):
     text_emb = text_emb / np.linalg.norm(text_emb)
     return np.sum((text_emb * img_emb))
 
+def get_text_similarity(text1, text2, clip_bench):
+    text_emb1 = clip_bench.encode_text(text1)
+    text_emb1 = text_emb1 / np.linalg.norm(text_emb1)
+    text_emb2 = clip_bench.encode_text(text2)
+    text_emb2 = text_emb2 / np.linalg.norm(text_emb2)
+    return np.sum((text_emb1 * text_emb2))
+
 def test_clip_single_image():
     import cv2 as cv
     from PIL import Image
@@ -200,14 +208,17 @@ def run_clip():
     thresholds = [0.8]
     result_folder = '/home/migakol/data/small_lsmdc_test/clip_results'
 
-    scene_graph = MilvusAPI('milvus', 'scene_graph_visual_genome', 'nebula_dev', 640)
+    # scene_graph = MilvusAPI('milvus', 'scene_graph_visual_genome', 'nebula_dev', 640)
+    scene_graph = MilvusAPI('milvus', 'pegasus', 'nebula_dev', 640)
+
+    location_list = LocationList()
 
     paragraph_pegasus = []
     for id in all_ids:
         movie = all_movies[int(id['movie_id'])]
         movie_name = base_folder + movie['path']
         print(movie['path'])
-        # if movie_name != '/dataset/lsmdc/avi/1010_TITANIC/1010_TITANIC_00.41.32.072-00.41.40.196.avi':
+        # if movie_name != '/dataset/lsmdc/avi/1024_Identity_Thief/1024_Identity_Thief_00.01.43.655-00.01.47.807.avi':
         #     continue
         embedding_list, boundaries = clip_bench.create_clip_representation(movie_name, thresholds=thresholds, method='single')
         save_name = movie['path'][movie['path'].find('/') + 1:-4] + '_clip.pickle'
@@ -215,6 +226,7 @@ def run_clip():
         #     pickle.dump([embedding_list, boundaries], handle)
 
         paragraph_pegasus.append(movie['path'])
+        movie_locations = []
         for k in range(embedding_list[0].shape[0]):
             emb = embedding_list[0][k, :]
             search_scene_graph = scene_graph.search_vector(20, emb.tolist())
@@ -223,9 +235,24 @@ def run_clip():
                 paragraph_pegasus.append(str(search_scene_graph[x][0]) + '   ' + search_scene_graph[x][1]['sentence'])
             print(search_scene_graph[0][1]['sentence'])
 
+            max_score = 0
+            best_ind = 0
+            for loc_ind, loc in enumerate(location_list.locations):
+                score = get_text_img_score('it is a ' + loc, clip_bench, emb)
+                # score = get_text_img_score(search_scene_graph[0][1]['sentence'] + ' in a ' + loc, clip_bench, emb)
+                if score > max_score:
+                    max_score = score
+                    best_ind = loc_ind
+            movie_locations.append(location_list.locations[best_ind])
+
+
         save_name = movie['path'][movie['path'].find('/') + 1:-4] + '_text_single.pickle'
         handle = open(os.path.join(result_folder, save_name), 'wb')
         pickle.dump(paragraph_pegasus, handle)
+
+        save_name = movie['path'][movie['path'].find('/') + 1:-4] + '_location.pickle'
+        with open(os.path.join(result_folder, save_name), 'wb') as handle:
+            pickle.dump(movie_locations, handle)
 
     print(paragraph_pegasus)
 
@@ -239,8 +266,8 @@ def run_clip():
         movie = all_movies[int(id['movie_id'])]
         movie_name = base_folder + movie['path']
         print(movie['path'])
-        # if movie_name != '/dataset/lsmdc/avi/1010_TITANIC/1010_TITANIC_00.41.32.072-00.41.40.196.avi':
-        #     continue
+        if movie_name != '/dataset/lsmdc/avi/1024_Identity_Thief/1024_Identity_Thief_00.01.43.655-00.01.47.807.avi':
+            continue
         embedding_list, boundaries = clip_bench.create_clip_representation(movie_name, thresholds=thresholds,
                                                                            method='median')
         save_name = movie['path'][movie['path'].find('/') + 1:-4] + '_clip.pickle'
@@ -267,8 +294,84 @@ def run_clip():
         pickle.dump(paragraph_pegasus, handle)
 
 
+def get_locations_for_lsmdc_movies():
+    """
+    Go over the small LSMDC subtest and find the optimal location for each one
+    :return:
+    """
+    lsmdc_processor = LSMDCProcessor()
+    all_movies = lsmdc_processor.get_all_movies()
+    small_dataset = LSMDCSmallDataset(lsmdc_processor.db)
+    all_ids = small_dataset.get_all_ids()
+    clip_bench = NebulaVideoEvaluation()
+    base_folder = '/dataset/lsmdc/avi/'
+    thresholds = [0.8]
+    result_folder = '/home/migakol/data/small_lsmdc_test/clip_results'
+    location_list = LocationList()
+    scene_graph = MilvusAPI('milvus', 'scene_graph_visual_genome', 'nebula_dev', 640)
+
+    paragraph_pegasus = []
+    for id in all_ids:
+        movie = all_movies[int(id['movie_id'])]
+        movie_name = base_folder + movie['path']
+        print(movie['path'])
+        # if movie_name != '/dataset/lsmdc/avi/1010_TITANIC/1010_TITANIC_00.41.32.072-00.41.40.196.avi':
+        #     continue
+        embedding_list, boundaries = clip_bench.create_clip_representation(movie_name, thresholds=thresholds,
+                                                                           method='single')
+
+        # Go over all clip embeddings and choose the best location for each one
+        movie_locations = []
+        for k in range(embedding_list[0].shape[0]):
+            emb = embedding_list[0][k, :]
+            max_score = 0
+            best_ind = 0
+            for emb_k, loc_emb in enumerate(location_list.loc_emb):
+                score = np.sum((loc_emb * emb))
+                if score > max_score:
+                    max_score = score
+                    best_ind = k
+            movie_locations.append(location_list.locations[best_ind])
+
+        save_name = movie['path'][movie['path'].find('/') + 1:-4] + '_location.pickle'
+        with open(os.path.join(result_folder, save_name), 'wb') as handle:
+            pickle.dump(movie_locations, handle)
+
+
+def test_locations():
+    result_folder = '/home/migakol/data/small_lsmdc_test/clip_results'
+
+    for f in os.listdir(result_folder):
+        if 'location' not in f:
+            continue
+        with open(os.path.join(result_folder, f), 'rb') as handle:
+            print(f)
+            movie_locations = pickle.load(handle)
+            print(movie_locations)
+            pass
+
+
+def test_locations2():
+    result_folder = '/home/migakol/data/small_lsmdc_test/clip_results'
+
+    for f in os.listdir(result_folder):
+        if 'location' in f:
+            continue
+        if 'text' not in f:
+            continue
+        with open(os.path.join(result_folder, f), 'rb') as handle:
+            print(f)
+            movie_locations = pickle.load(handle)
+            print(movie_locations)
+            pass
+
 
 if __name__ == '__main__':
+
+    # text_results = 'all_text_single.pickle'
+    # with open(os.path.join(result_folder, text_results), 'wb') as handle:
+    #     pickle.dump(paragraph_pegasus, handle)
+
     print('Start examples')
     # Part 1 - choose 50 videos
     # create_n_random_lsmdc_dataset(50)
@@ -280,5 +383,7 @@ if __name__ == '__main__':
     # run_step()
     # Part 4 - run CLIP on all the data
     # test_clip_single_image()
-    run_clip()
+    # run_clip()
+    # get_locations_for_lsmdc_movies()
+    test_locations()
     # create_triplets_from_clip()

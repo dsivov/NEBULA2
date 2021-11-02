@@ -52,6 +52,7 @@ def choose_best_setence_from_array(embedding_array, sentences):
 
     return best_sent, best_emb
 
+
 class NebulaVideoEvaluation:
     def __init__(self):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
