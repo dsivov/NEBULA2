@@ -155,6 +155,8 @@ class ELASTIC_SEARCH:
         #step = settings.STEP_SEARCH_RESULTS
         #number_of_steps = settings.MAX_SEARCH_RESULTS // step
         #start = 0
+        print(self.index_name)
+        print(query)
         s = Search(using=self.es, index=self.index_name).query(query)
         s = s.highlight_options(order='score')
         for hit in s.execute():
@@ -182,9 +184,9 @@ def main():
     
     es_load = ELASTIC_SEARCH()
     #es_load.rebuild_index()
-    _id = es_load.search_for_existing_movie("Movies/92363515")
-    doc = es_load.get_single_story_line("Movies/92363515")
-    es_load.update_index(_id, doc)
+    _id = es_load.search_for_existing_movie("Movies/121081267")
+    doc = es_load.get_single_story_line("Movies/121081267")
+    es_load.insert_update_index("Movies/121081267")
     #es_load.create_add_index(es_load.get_single_story_line('Movies/92349435'))
         
 if __name__ == "__main__":

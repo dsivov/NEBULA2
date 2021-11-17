@@ -18,6 +18,7 @@ class NRE_API:
         self.db = gdb.connect_db(self.database)
         self.es_host = config.get_elastic_host()
         self.index_name = config.get_elastic_index()
+        self.gdb = gdb
     
     def get_new_movies(self):
         nebula_movies=[]

@@ -270,7 +270,7 @@ class NEBULA_SCENE_DETECTOR():
             print(file_name)
             print(movie_mame)
             self.convert_avi_to_mp4(_file, storage_dir + "/" + movie_mame)
-            movie_id = self.insert_movie(file_name, movie_mame, ["hollywood", "pegasus", "visual genome"],
+            movie_id = self.insert_movie(file_name, movie_mame, ["lsmdc", "pegasus", "visual genome"],
                               storage_dir + "/" + movie_mame + ".mp4", "static/" + dataset + "/" + movie_mame + ".mp4", 300, "created")
             movies.append((_file, movie_id))
         return(movies)
