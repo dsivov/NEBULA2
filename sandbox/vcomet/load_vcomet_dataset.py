@@ -18,9 +18,9 @@ from benchmark.clip_benchmark import NebulaVideoEvaluation
 class CREATE_VC_KG:
     def __init__(self):
         self.milvus_vc = MilvusAPI(
-            'milvus', 'vcomet_visual_embed_rnx16', 'nebula_visualcomet', 640)
+            'milvus', 'vcomet_visual_embed_vit_txt', 'nebula_visualcomet', 512)
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.model, self.preprocess = clip.load("RN50x16", self.device)
+        self.model, self.preprocess = clip.load("ViT-B/32", self.device)
         self.nre = NRE_API()
         self.db = self.nre.db
         self.gdb = self.nre.gdb
@@ -141,6 +141,35 @@ class CREATE_VC_KG:
             vector = self._calculate_images_features(vcr_path+vc)
             self._add_image_features(vector, vcr_path+vc)
 
+
+    def create_img_and_text_embeddings(self):
+        vcr_path = "/dataset/vcomet/data/vcr1/vcr1images/"
+        vcomet_kg = []
+        texts = []
+        vectors = []
+        print("Loading files...")
+        for f in glob.glob("data/vcomet*.json"):
+                with open(f, "rb") as infile:
+                    vcomet_kg = vcomet_kg + (json.load(infile))
+        print("Remove duplicates....")
+        for vg in vcomet_kg:
+            #print(vg)
+            vcr_img = vcr_path + vg['img_fn']
+            vector_img = self._calculate_images_features(vcr_img)
+            vectors.append(vector_img.detach().numpy())
+            texts.append(vg['event'])
+            texts.append(vg['place'])
+            for intent in vg['intent']:
+                texts.append(intent)
+            for txt in texts:
+                vectors.append(self.encode_text(txt))
+            feature_mean = np.mean(vectors, axis=0)
+            mean_t = torch.from_numpy(feature_mean)
+            #print(mean_t)
+            
+            #vector = self._calculate_images_features(vcr_path+vc)
+            self._add_image_features(mean_t, vcr_img)
+
     def collect_data(self):
         vcr_path = "/dataset/vcomet/data/vcr1/vcr1images/"
         vcomet_kg = []
@@ -190,22 +219,22 @@ class CREATE_VC_KG:
             print (k, "->", proposed_map[k])
         return(candidates_score ,candidates_text)
 
-    def test_movie():
-        movie = 'Movies/114208744'
-        stages = kg.get_stages(movie)
-        vc_db = kg.gdb.connect_db("nebula_visualcomet")
+    def test_movie(self):
+        movie = 'Movies/92356045'
+        stages = self.get_stages(movie)
+        vc_db = self.gdb.connect_db("nebula_visualcomet")
     
         for stage in stages:
             print("Calculate scene for: ", stage['arango_id'])
-            vector, vector_m = kg.get_scene_vector(
+            vector, vector_m = self.get_scene_vector(
                 stage['full_path'], stage['scene_element'], stage['start'], stage['stop'])
             embedding_array = np.zeros((0, 512))
             embedding_array = np.append(embedding_array, vector, axis=0)
             #print(vector.tolist()[0])
-            similar_nodes = kg.milvus_vc.search_vector(5, vector.tolist()[0])
-            similar_nodes_m = kg.milvus_vc.search_vector(5, vector_m.tolist()[0])
+            similar_nodes = self.milvus_vc.search_vector(50, vector.tolist()[0])
+            #similar_nodes_m = self.milvus_vc.search_vector(5, vector_m.tolist()[0])
             
-            similar_nodes = similar_nodes + similar_nodes_m
+            #similar_nodes = similar_nodes + similar_nodes_m
             img_fns = []
             for node in similar_nodes:
                 img_fns.append(node[1]['filename'].split("vcr1images/")[1])
@@ -221,7 +250,9 @@ class CREATE_VC_KG:
                 #print(filter)
                 results = vc_db.collection("vcomet_kg").find(filter)
                 for result in results:
-                    for person in [['man', 'woman'], ['woman', 'man'], ['girl', 'boy'], ['boy', 'girl'],['man', 'man'], ['woman', 'woman'], ['girl', 'girl'], ['boy', 'boy']]:
+                    for person in [['man', 'woman'], ['woman', 'man'], ['girl', 'boy'], 
+                    ['boy', 'girl'],['man', 'man'], ['woman', 'woman'],
+                     ['girl', 'girl'], ['boy', 'boy'],["man"," "],["woman"," "], [" ", "woman"],[" ", "man"]]:
                         event = re.sub("\d+", person[0], result['event'], count=1)
                         event = re.sub("\d+", person[1], event)
                         place = result['place']
@@ -245,35 +276,46 @@ class CREATE_VC_KG:
             proposed_intents = list(dict.fromkeys(proposed_intents))
             proposed_afters = list(dict.fromkeys(proposed_afters))
             proposed_befors = list(dict.fromkeys(proposed_befors))
-            
+            print(len(proposed_events))
+            print(len(proposed_places))
+            print(len(proposed_intents))
+
             print("Top K Events...")
-            score, events = kg.get_top_k_from_proposed(10, proposed_events, embedding_array)
-            print("Top K Places...")
-            score, places = kg.get_top_k_from_proposed(10, proposed_places, embedding_array)
-            print("Top K Intents...")
-            score, intents = kg.get_top_k_from_proposed(10, proposed_intents, embedding_array)
-            print("Top K Before...")
-            score, befors = kg.get_top_k_from_proposed(10, proposed_befors, embedding_array)
-            print("Top K Afters...")
-            score, afters = kg.get_top_k_from_proposed(10, proposed_afters, embedding_array)
+            score, events = self.get_top_k_from_proposed(20, proposed_events, embedding_array)
+            # print("Top K Places...")
+            # core, places = self.get_top_k_from_proposed(10, proposed_places, embedding_array)
+            # print("Top K Intents...")
+            # score, intents = self.get_top_k_from_proposed(10, proposed_intents, embedding_array)
+            # print("Top K Before...")
+            # score, befors = self.get_top_k_from_proposed(10, proposed_befors, embedding_array)
+            # print("Top K Afters...")
+            # score, afters = self.get_top_k_from_proposed(10, proposed_afters, embedding_array)
+            # stories = []
+            # #for place in places:
+            # print("Top K Stories")
+            # for event in events:
+            #     for intent in intents:
+            #         stories.append(event + " " + intent )
+
             stories = []
-            #for place in places:
-            print("Top K Stories")
-            for event in events:
-                for intent in intents:
-                    stories.append(event + " " + intent )
-            score, top_stories = kg.get_top_k_from_proposed(10, stories, embedding_array)
-            stories = []
-            print("Top K Stories with place")
-            for place in places:
-                for story in top_stories:
-                    stories.append(place + " " + story)
-            score, top_stories = kg.get_top_k_from_proposed(10, stories, embedding_array)
+            for proposed_event in events:
+                for proposed_place in proposed_places:
+                    #for proposed_intent in proposed_intents:
+                    stories.append(proposed_place + " " + proposed_event)
+            score, top_stories = self.get_top_k_from_proposed(5,stories, embedding_array)
+            
+            # #
+            # print("Top K Stories with place")
+            # for place in places:
+            #     for story in top_stories:
+            #         stories.append(place + " " + story)
+            # score, top_stories = self.get_top_k_from_proposed(10, stories, embedding_array)
 
 def main():
     kg = CREATE_VC_KG()
     # kg.collect_data()
-    kg.create_img_embeddings()
+    # kg.test_movie()
+    kg.create_img_and_text_embeddings()
     
 
 #zeroshot_weights = zeroshot_classifier(imagenet_classes, imagenet_templates)
