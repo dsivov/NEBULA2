@@ -46,7 +46,7 @@ class MDMMT_API():
         self.model_name = "bert-base-cased" 
         self.model = AutoModel.from_pretrained(self.model_name)
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-        state = torch.load('/home/dimas/mdmmt_test-master/checkpoint/mdmmt_3mod.pth', map_location='cpu')
+        state = torch.load('/home/dimas/git/NEBULA2/nebula_api/mdmmt_api/mdmmt_model/mdmmt_3mod.pth', map_location='cpu')
         self.experts_info = {
             'VIDEO': dict(dim=2048, idx=1, max_tok=30),
             'CLIP': dict(dim=512, idx=2, max_tok=30),
