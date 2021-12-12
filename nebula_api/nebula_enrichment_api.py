@@ -117,7 +117,28 @@ class NRE_API:
             txn_db.transaction_status()
             txn_db.commit_transaction()
             return True    
-   
+    
+    def force_start_expert(self, expert):
+        print("Updating global version")
+        query = 'FOR doc IN changes UPDATE doc WITH {' + expert + ': doc.'+ expert + ' + 1} in changes'
+        #print(query)
+        self.db.aql.execute(query)
+    
+    def change_status_movie(self, status, movie_id):
+        query = 'FOR doc IN Movies FILTER doc._id == \'' + movie_id + '\' UPDATE doc WITH {status: \''+ status +'\' } in Movies'
+        self.db.aql.execute(query)
+    
+    def get_all_expert_data(self, expert, movie_id):
+        #Actions, Actors
+        expert_data = []
+        query = 'FOR doc IN Nodes FILTER doc.arango_id == \'' + movie_id + '\' AND doc.class == \'' + expert + '\' RETURN doc'
+        cursor = self.db.aql.execute(query)
+        for node in cursor:
+            expert_data.append(node) 
+        return(expert_data)
+
+nre = NRE_API()
+nre.get_all_expert_data("Action", "Movies/92363482")
 # while True:
 #     topic = "NRE"
 #     messagedata = "new_plugin"
