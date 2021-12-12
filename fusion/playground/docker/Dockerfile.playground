@@ -1,0 +1,96 @@
+FROM nvidia/cuda:11.3.1-cudnn8-devel-ubuntu18.04
+SHELL [ "/bin/bash", "--login", "-c" ]
+
+
+# Install stuff
+
+
+# Create a non-root user
+ARG username=gil
+ARG uid=1000
+ARG gid=100
+ENV USER $username
+ENV UID $uid
+ENV GID $gid
+ENV HOME /home/$USER
+RUN adduser --disabled-password \
+    --gecos "Non-root user" \
+    --uid $UID \
+    --gid $GID \
+    --home $HOME \
+    $USER
+
+
+# 
+# COPY environment.yml requirements.txt /tmp/
+COPY environment.yml /tmp/
+RUN chown $UID:$GID /tmp/environment.yml
+COPY postBuild /usr/local/bin/postBuild.sh
+RUN chown $UID:$GID /usr/local/bin/postBuild.sh && \
+    chmod u+x /usr/local/bin/postBuild.sh
+COPY entrypoint.sh /usr/local/bin/
+RUN chown $UID:$GID /usr/local/bin/entrypoint.sh && \
+    chmod u+x /usr/local/bin/entrypoint.sh
+# COPY Anaconda3-2021.11-Linux-x86_64.sh $HOME/
+# RUN chown $UID:$GID $HOME/Anaconda3-2021.11-Linux-x86_64.sh && \
+#     chmod u+x $HOME/Anaconda3-2021.11-Linux-x86_64.sh
+
+RUN  apt-get update && \
+    apt-get install -y wget git libgl1-mesa-glx && \
+    apt-get install -y ffmpeg libsm6 libxext6 && \
+    apt-get install -y vim nodejs
+    # && rm -rf /var/lib/apt/lists/*
+
+# lose sudo
+
+USER $USER
+
+# install anaconda
+
+ENV CONDA_DIR $HOME/miniconda3
+RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && \
+    chmod +x ~/miniconda.sh && \
+    ~/miniconda.sh -b -p $CONDA_DIR && \
+    rm ~/miniconda.sh
+
+
+# ENV CONDA_DIR $HOME/anaconda3
+# RUN ~/Anaconda3-2021.11-Linux-x86_64.sh -b -p $CONDA_DIR
+
+# make non-activate conda commands available
+ENV PATH=$CONDA_DIR/bin:$PATH
+# make conda activate command available from /bin/bash --login shells
+RUN echo ". $CONDA_DIR/etc/profile.d/conda.sh" >> ~/.profile
+# make conda activate command available from /bin/bash --interative shells
+RUN conda init bash    
+
+ENV PROJECT_NAME playground
+ENV PROJECT_DIR $HOME/${PROJECT_NAME}_root
+RUN mkdir $PROJECT_DIR
+WORKDIR $PROJECT_DIR
+# Get Nebula code + detectron expert
+RUN git clone https://github.com/dsivov/NEBULA2/
+ENV NEBULA_DIR $PROJECT_DIR/NEBULA2
+ENV EXPERTS_DIR ${NEBULA_DIR}/experts
+RUN git clone https://github.com/facebookresearch/detectron2.git ${EXPERTS_DIR}/tracker/autotracker/detection_models/detectron/detectron2
+
+# build the conda environment
+ENV ENV_PREFIX $PROJECT_DIR/env
+RUN conda update --name base --channel defaults conda && \
+    conda env create --prefix $ENV_PREFIX --file /tmp/environment.yml --force && \
+    conda clean --all --yes
+# Install jupyterlab globally    
+RUN conda install jupyterlab
+RUN conda activate $ENV_PREFIX && \
+    pip3 install torch==1.10.0+cu113 torchvision==0.11.1+cu113 torchaudio==0.10.0+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html && \ 
+    python -m pip install -e ${EXPERTS_DIR}/tracker/autotracker/detection_models/detectron/detectron2 && \
+    ipython kernel install --user --name=${PROJECT_NAME} && \
+    source /usr/local/bin/postBuild.sh
+# run the postBuild script to install any JupyterLab extensions
+RUN conda deactivate
+COPY scenecliptest00581.avi ${EXPERTS_DIR}/movies/
+COPY aws $HOME/.aws
+
+ENTRYPOINT [ "/usr/local/bin/entrypoint.sh" ]
+CMD [ "jupyter", "lab", "--no-browser", "--ip", "0.0.0.0" ]
+# CMD [ "/bin/bash", "--login"]
