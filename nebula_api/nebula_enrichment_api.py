@@ -120,7 +120,7 @@ class NRE_API:
     
     def force_start_expert(self, expert):
         print("Updating global version")
-        query = 'FOR doc IN changes UPDATE doc WITH {' + expert + ': doc.'+ expert + ' + 1} in changes'
+        query = 'FOR doc IN changes UPDATE doc WITH {' + expert + ': doc.'+ expert + ' - 1} in changes'
         #print(query)
         self.db.aql.execute(query)
     
