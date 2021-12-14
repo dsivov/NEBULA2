@@ -145,8 +145,17 @@ class NRE_API:
             clip_data[node['scene_element']] = [node['sentences'], node['scene_graph_triplets']] 
         return(clip_data)
 
+    def get_vcomet_data(self, movie_id):
+        vcomet_data = []
+        query = 'FOR doc IN nebula_vcomet_lighthouse FILTER doc.movie == \'' + movie_id + '\' RETURN doc'
+        cursor = self.db.aql.execute(query)
+        for node in cursor:
+            vcomet_data.append(node)
+            print(node)
+        return(vcomet_data)
+
 nre = NRE_API()
-#nre.get_all_expert_data("Actions","Movies/114206264")
+nre.get_vcomet_data("Movies/114206264")
 # while True:
 #     topic = "NRE"
 #     messagedata = "new_plugin"
