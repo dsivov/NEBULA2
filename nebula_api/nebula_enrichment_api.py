@@ -131,7 +131,7 @@ class NRE_API:
     def get_all_expert_data(self, expert, movie_id):
         #Actions, Actors
         expert_data = []
-        query = 'FOR doc IN Nodes FILTER doc.arango_id == \'' + movie_id + '\' AND doc.class == \'' + expert + '\'AND HAS(doc,"bboxes") RETURN doc'
+        query = 'FOR doc IN Nodes FILTER doc.arango_id == \'' + movie_id + '\' AND doc.class == \'' + expert + '\'AND (HAS(doc,"bboxes") OR HAS(doc,"box")) RETURN doc'
         cursor = self.db.aql.execute(query)
         for node in cursor:
             expert_data.append(node) 
@@ -143,11 +143,10 @@ class NRE_API:
         cursor = self.db.aql.execute(query)
         for node in cursor:
             clip_data[node['scene_element']] = [node['sentences'], node['scene_graph_triplets']] 
-        print(clip_data)
         return(clip_data)
 
 nre = NRE_API()
-nre.get_clip_data("Movies/92354428")
+#nre.get_all_expert_data("Actions","Movies/114206264")
 # while True:
 #     topic = "NRE"
 #     messagedata = "new_plugin"
