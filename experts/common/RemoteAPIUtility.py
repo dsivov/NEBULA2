@@ -69,6 +69,7 @@ class RemoteAPIUtility:
                 'fps': data['meta']['fps'],          # movie file metadata
                 'width': data['meta']['width'],
                 'height': data['meta']['height'],
+                'last frame': data['last_frame'],
                 'movie_id': data['movie_id'],        # random identifier
             })
 

@@ -151,7 +151,7 @@ class NRE_API:
         cursor = self.db.aql.execute(query)
         for node in cursor:
             vcomet_data.append(node)
-            print(node)
+            # print(node)
         return(vcomet_data)
 
 nre = NRE_API()
