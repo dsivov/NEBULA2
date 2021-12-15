@@ -154,8 +154,8 @@ class NRE_API:
             print(node)
         return(vcomet_data)
 
-nre = NRE_API()
-nre.get_vcomet_data("Movies/114206264")
+#nre = NRE_API()
+#nre.get_vcomet_data("Movies/114206264")
 # while True:
 #     topic = "NRE"
 #     messagedata = "new_plugin"
