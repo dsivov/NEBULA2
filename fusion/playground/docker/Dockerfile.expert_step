@@ -1,0 +1,63 @@
+FROM nvidia/cuda:10.2-cudnn8-devel-ubuntu18.04
+SHELL [ "/bin/bash", "--login", "-c" ]
+
+
+# Install stuff
+
+
+# Create a non-root user
+ARG username=gil
+ARG uid=1000
+ARG gid=100
+ENV USER $username
+ENV UID $uid
+ENV GID $gid
+ENV HOME /home/$USER
+RUN adduser --disabled-password \
+    --gecos "Non-root user" \
+    --uid $UID \
+    --gid $GID \
+    --home $HOME \
+    $USER
+
+COPY entrypoint.sh /usr/local/bin/
+RUN chown $UID:$GID /usr/local/bin/entrypoint.sh && \
+    chmod u+x /usr/local/bin/entrypoint.sh
+# COPY Anaconda3-2021.11-Linux-x86_64.sh $HOME/
+# RUN chown $UID:$GID $HOME/Anaconda3-2021.11-Linux-x86_64.sh && \
+#     chmod u+x $HOME/Anaconda3-2021.11-Linux-x86_64.sh
+
+RUN  apt-get update && \
+    apt-get install -y wget git libgl1-mesa-glx && \
+    apt-get install -y ffmpeg libsm6 libxext6 && \
+    apt-get install -y vim nodejs
+    # && rm -rf /var/lib/apt/lists/*
+
+# lose sudo
+
+USER $USER
+
+# install anaconda
+
+ENV CONDA_DIR $HOME/miniconda3
+RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && \
+    chmod +x ~/miniconda.sh && \
+    ~/miniconda.sh -b -p $CONDA_DIR && \
+    rm ~/miniconda.sh
+
+
+# ENV CONDA_DIR $HOME/anaconda3
+# RUN ~/Anaconda3-2021.11-Linux-x86_64.sh -b -p $CONDA_DIR
+
+# make non-activate conda commands available
+ENV PATH=$CONDA_DIR/bin:$PATH
+# make conda activate command available from /bin/bash --login shells
+RUN echo ". $CONDA_DIR/etc/profile.d/conda.sh" >> ~/.profile
+# make conda activate command available from /bin/bash --interative shells
+RUN conda init bash    
+
+RUN conda install jupyterlab
+
+ENTRYPOINT [ "/usr/local/bin/entrypoint.sh" ]
+CMD [ "jupyter", "lab", "--no-browser", "--ip", "0.0.0.0" ]
+

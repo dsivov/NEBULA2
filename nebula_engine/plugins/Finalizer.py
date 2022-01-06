@@ -7,11 +7,12 @@ class Finalizer:
     def run_reconciliation(self):
         print("Start Finalizer  - waiting for all processes finish")
         while True:
+            self.nre.wait_for_finish(['Actors', 'Actions', 'SceneGraph'])
             movies = self.nre.wait_for_change("Finalizer", "ClipScene")
             print("run reconciliation - Finalizer for movies: ", movies)
-            for movie in movies:
-                query = 'FOR doc IN Movies FILTER doc._id == "' + movie + '" UPDATE doc WITH {status: \"updated\"} IN Movies'
-                print(query)
-                self.nre.db.aql.execute(query)
-            self.nre.update_expert_status("Finalizer")
+            # for movie in movies:
+            #     query = 'FOR doc IN Movies FILTER doc._id == "' + movie + '" UPDATE doc WITH {status: \"updated\"} IN Movies'
+            #     print(query)
+            #     self.nre.db.aql.execute(query)
+            # self.nre.update_expert_status("Finalizer")
             time.sleep(3)

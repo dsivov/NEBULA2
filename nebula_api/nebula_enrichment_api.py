@@ -18,6 +18,7 @@ class NRE_API:
         self.db = gdb.connect_db(self.database)
         self.es_host = config.get_elastic_host()
         self.index_name = config.get_elastic_index()
+        self.gdb = gdb
     
     def get_new_movies(self):
         nebula_movies=[]
@@ -116,7 +117,45 @@ class NRE_API:
             txn_db.transaction_status()
             txn_db.commit_transaction()
             return True    
-   
+    
+    def force_start_expert(self, expert):
+        print("Updating global version")
+        query = 'FOR doc IN changes UPDATE doc WITH {' + expert + ': doc.'+ expert + ' - 1} in changes'
+        #print(query)
+        self.db.aql.execute(query)
+    
+    def change_status_movie(self, status, movie_id):
+        query = 'FOR doc IN Movies FILTER doc._id == \'' + movie_id + '\' UPDATE doc WITH {status: \''+ status +'\' } in Movies'
+        self.db.aql.execute(query)
+    
+    def get_all_expert_data(self, expert, movie_id):
+        #Actions, Actors
+        expert_data = []
+        query = 'FOR doc IN Nodes FILTER doc.arango_id == \'' + movie_id + '\' AND doc.class == \'' + expert + '\'AND (HAS(doc,"bboxes") OR HAS(doc,"box")) RETURN doc'
+        cursor = self.db.aql.execute(query)
+        for node in cursor:
+            expert_data.append(node) 
+        return(expert_data)
+    
+    def get_clip_data(self, movie_id):
+        clip_data = {}
+        query = 'FOR doc IN StoryLine FILTER doc.arango_id == \'' + movie_id + '\' RETURN doc'
+        cursor = self.db.aql.execute(query)
+        for node in cursor:
+            clip_data[node['scene_element']] = [node['sentences'], node['scene_graph_triplets']] 
+        return(clip_data)
+
+    def get_vcomet_data(self, movie_id):
+        vcomet_data = []
+        query = 'FOR doc IN nebula_vcomet_lighthouse FILTER doc.movie == \'' + movie_id + '\' RETURN doc'
+        cursor = self.db.aql.execute(query)
+        for node in cursor:
+            vcomet_data.append(node)
+            # print(node)
+        return(vcomet_data)
+
+#nre = NRE_API()
+#nre.get_vcomet_data("Movies/114206264")
 # while True:
 #     topic = "NRE"
 #     messagedata = "new_plugin"

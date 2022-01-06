@@ -1,0 +1,28 @@
+version: "3.9"
+services:
+  jupyterlab-server:
+    image: step:v2
+    # runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]    #   args:
+    #     - username=${USER}
+    #     - uid=1000        
+    #   # context: ../
+    #   dockerfile: Dockerfile.playground
+    ports:
+      - "8888:8888"
+    # volumes:
+    #   - ../bin:/home/${USER}/app/bin
+    #   - ../data:/home/${USER}/app/data
+    #   - ../doc:/home/${USER}/app/doc
+    #   - ../notebooks:/home/${USER}/app/notebooks
+    #   - ../results:/home/${USER}/app/results
+    #   - ../src:/home/${USER}/app/src
+    init: true
+    stdin_open: true
+    tty: true
