@@ -18,6 +18,7 @@ from nebula_api.nebula_enrichment_api import NRE_API
 import glob
 import redis
 import boto3
+import json
 
 class NEBULA_SCENE_DETECTOR():
     def __init__(self):
@@ -312,14 +313,68 @@ class NEBULA_SCENE_DETECTOR():
                 video.release()  # Save the video
                 print("Saved video to: {}".format(movie_name_path))
 
+    def get_frame_dict(self, key_dic):
+
+        # Define variables for parsed dictionary
+        new_key = key_dic['img_fn'].split("/")[1].split("@")[0]
+        fn = key_dic['img_fn'].split("/")[1].split("@")[1].split(".")[0]
+        split = key_dic['split'] if 'split' in key_dic else ''
+        place = key_dic['place'] if 'place' in key_dic else ''
+        event = key_dic['event'] if 'event' in key_dic else ''
+        intent = key_dic['intent'] if 'intent' in key_dic else ''
+        before = key_dic['before'] if 'before' in key_dic else ''
+        after = key_dic['after'] if 'after' in key_dic else ''
+
+        processed_dict = {
+            'clip_id': new_key,
+            'fn': fn,
+            'split': split,
+            'place': place,
+            'event': event,
+            'intent': intent,
+            'before': before,
+            'after': after
+        }
+        return processed_dict
+
+    def proprocess_dataset(self, dataset_path):
+        new_db = []
+        test_json = open(dataset_path)
+        data = json.load(test_json)
+        for idx, key in enumerate(data):
+            if "lsmdc" in key['img_fn']:
+                new_key = self.get_frame_dict(key)
+                new_db.append(new_key)
+        return new_db
+
+    def parse_comet_to_lsmdc(self, upload_dir):
+
+        # Paths to .JSONs
+        train_path = os.path.join(upload_dir, "train_annots.json")
+        val_path = os.path.join(upload_dir, "val_annots.json")
+        test_path = os.path.join(upload_dir, "test_annots.json")
+
+        # Parsed .JSONs for LSMDC dataset
+        train_dict = self.proprocess_dataset(train_path)
+        val_dict = self.proprocess_dataset(val_path)
+        test_dict = self.proprocess_dataset(test_path)
+
+        # Sort JSONs
+        train_dict = sorted(train_dict, key=lambda d: d['clip_id'])
+        val_dict = sorted(val_dict, key=lambda d: d['clip_id'])
+        test_dict = sorted(test_dict, key=lambda d: d['clip_id'])
+        
+
+
+
 
 
 
 
 def main():
-   
     scene_detector = NEBULA_SCENE_DETECTOR()
-    scene_detector.merge_movies("/dataset1/", "/dataset1/storage/")
+    scene_detector.parse_comet_to_lsmdc("/dataset1/visualcomet/")
+    # scene_detector.merge_movies("/dataset1/", "/dataset1/storage/")
     # scene_detector.new_movies_batch_processing()
 
     #scene_detector.init_new_db("nebula_datadriven")
