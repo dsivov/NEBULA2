@@ -274,11 +274,54 @@ class NEBULA_SCENE_DETECTOR():
                               storage_dir + "/" + movie_mame + ".mp4", "static/" + dataset + "/" + movie_mame + ".mp4", 300, "created")
             movies.append((_file, movie_id))
         return(movies)
+    
+    def merge_movies(self, upload_dir, storage_dir):
+        print("Source directory: {}".format(upload_dir))
+        print("Destination directory: {}".format(storage_dir))
+
+        _files = glob.glob(upload_dir + '/*')
+        movie_names = ['0001_American_Beauty']
+        movies_full_path = []
+        for movie_name in movie_names:
+            movies_full_path.append(os.path.join(upload_dir, movie_name))
+        
+        # Merge movie clips of movie into one movie
+        for _file in _files:
+            if _file in movies_full_path:
+                movie_clips = sorted(os.listdir(_file))
+
+                 # Create a new video
+                fourcc = cv2.VideoWriter_fourcc(*'XVID')
+                movie_name = _file.split("/")[-1]
+                clip_metadata = self.get_video_metadata(os.path.join(_file, movie_clips[0]))
+                movie_name_path = os.path.join(storage_dir, movie_name + ".avi")
+                video = cv2.VideoWriter(movie_name_path, fourcc, clip_metadata['fps'], (clip_metadata['width'], clip_metadata['height']))
+
+                print("Working on movie: " + str(movie_name))
+
+                # Iterate over the clips of the movie
+                for clip in movie_clips:
+                    clip = os.path.join(_file, clip)
+                    curr_v = cv2.VideoCapture(clip)
+                    while curr_v.isOpened():
+                        r, frame = curr_v.read()  # Get return value and curr frame of curr video
+                        if not r:
+                            break
+                        video.write(frame)  # Write the frame
+
+                video.release()  # Save the video
+                print("Saved video to: {}".format(movie_name_path))
+
+
+
+
 
 def main():
    
     scene_detector = NEBULA_SCENE_DETECTOR()
-    scene_detector.new_movies_batch_processing()
+    scene_detector.merge_movies("/dataset1/", "/dataset1/storage/")
+    # scene_detector.new_movies_batch_processing()
+
     #scene_detector.init_new_db("nebula_datadriven")
     # _files = glob.glob('/movies/*avi')
     # #Example usage
