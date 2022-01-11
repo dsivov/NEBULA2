@@ -347,6 +347,100 @@ class NEBULA_SCENE_DETECTOR():
                 new_db.append(new_key)
         return new_db
 
+    # Merge all annotations for the same frame in VisualCOMET
+    def merge_clip_ids(self, dataset):
+        new_dataset = []
+
+        prev_clip = dataset[0]
+
+        for i in range(1, len(dataset)):
+            cur_clip = dataset[i]
+
+            if (isinstance(prev_clip, list) and prev_clip[0]['clip_id'] != cur_clip['clip_id']) or \
+                (isinstance(prev_clip, dict) and prev_clip['clip_id'] != cur_clip['clip_id']):
+                    new_dataset.append(dataset[i-1])
+
+            # If we have multiple dicts, then we have different frames so we store it in list of dics
+            # and we want to make sure we have same clip_ids in the current dics we're comparing
+            # We also the now atleast a list of two dicts.
+            if isinstance(prev_clip, list) and prev_clip[0]['clip_id'] == cur_clip['clip_id']:
+                # Check if we have the cur_clip's fn already in the list
+                # If yes, we add all the information to that fn instead of expending the list with similar fn's.
+                
+                found_same_fn = False
+                for obj in prev_clip:
+                    if obj['clip_id'] == cur_clip['clip_id'] and \
+                        obj['fn'] == cur_clip['fn']:
+                        found_same_fn = True
+                        if obj['place'] != cur_clip['place']:
+                            obj['place'] += (", " + cur_clip['place'])
+
+                        if obj['event'] != cur_clip['event']:
+                            obj['event'] += (", " +cur_clip['event'])
+
+                        if obj['intent'] != cur_clip['intent']:
+                            obj['intent'] += cur_clip['intent']
+                        
+                        if obj['before'] != cur_clip['before']:
+                            obj['before'] += cur_clip['before']
+                        
+                        if obj['after'] != cur_clip['after']:
+                            obj['after'] += cur_clip['after']
+
+                # If we don't have the current fn in our list of dics, so we add the current dict with that new frame
+                if not found_same_fn:
+                    prev_clip.append(cur_clip)
+                
+                dataset[i] = prev_clip
+                        
+            else:
+                if isinstance(prev_clip, list):
+                    prev_clip_id = prev_clip[0]['clip_id']
+                else:
+                    prev_clip_id = prev_clip['clip_id']
+            
+                if i > 0 and prev_clip_id == cur_clip['clip_id']:
+                    # If we have multiple frames on same timestamp
+                    # We add the two dicts to a list.
+                    if prev_clip['fn'] != cur_clip['fn']:
+                        temp_lst = []
+                        temp_lst.append(cur_clip)
+                        temp_lst.append(prev_clip)
+                        cur_clip = temp_lst
+                        # Remove the previous frame because it's already in our list of dicts.
+                        # del dataset[i - 1]
+                    else:
+                        if prev_clip['place'] != cur_clip['place']:
+                            cur_clip['place'] += (", " + prev_clip['place'])
+
+                        if prev_clip['event'] != cur_clip['event']:
+                            cur_clip['event'] += (", " +prev_clip['event'])
+
+                        if prev_clip['intent'] != cur_clip['intent']:
+                            cur_clip['intent'] += prev_clip['intent']
+                        
+                        if prev_clip['before'] != cur_clip['before']:
+                            cur_clip['before'] += prev_clip['before']
+                        
+                        if prev_clip['after'] != cur_clip['after']:
+                            cur_clip['after'] += prev_clip['after']
+                        
+                        # Remove previous frame because we concatenated its contents to our current SIMILAR frame
+                        # del dataset[i - 1]
+
+                prev_clip = cur_clip
+                dataset[i] = prev_clip
+            # We always delete previous dataset dict because we use it by merging it with current dict.
+        return new_dataset
+
+
+
+
+
+
+        
+
+
     def parse_comet_to_lsmdc(self, upload_dir):
 
         # Paths to .JSONs
@@ -363,6 +457,13 @@ class NEBULA_SCENE_DETECTOR():
         train_dict = sorted(train_dict, key=lambda d: d['clip_id'])
         val_dict = sorted(val_dict, key=lambda d: d['clip_id'])
         test_dict = sorted(test_dict, key=lambda d: d['clip_id'])
+
+        # Merge all annotations for the same frame
+        train_dict = self.merge_clip_ids(train_dict)
+        val_dict = self.merge_clip_ids(val_dict)
+        test_dict = self.merge_clip_ids(test_dict)
+
+        a=0
         
 
 
