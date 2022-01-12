@@ -96,7 +96,7 @@ class Comet:
         #         return(False)
         return(True)
     
-    def get_groundings(self, lighthouses, type='concepts', person='person'):
+    def get_groundings(self, events, places=None, type='concepts', person='person'):
         if type == 'concepts':
             relations = self.comcepts_relations
             num_generate = 50
@@ -111,10 +111,18 @@ class Comet:
             num_generate = 10
         else:
             print("Bad relation type: " + type)
-
+        pplaces = []
+        
+        if places:
+            for place in places:
+                pplaces.append("person " + place)
+        lighthouses = events + pplaces
+        print(lighthouses)
+        input()
         groundings = []
         for lighthouse in lighthouses:
             lighthouse = re.sub("\d+", "person", lighthouse)
+            print(lighthouse)
             for rel in relations:
                 queries = []  
                 query = "{} {} [GEN]" .format(lighthouse, rel)
@@ -147,22 +155,22 @@ if __name__ == "__main__":
     # heads = ['2 is holding onto a mackeral and tossing his head back laughing with 1','4 growls at the start of the battle',
     # '2 laughs with the others','1 - 5 stand over a freshly slaughtered hog',
     # '3 places someone ashes in the sea','man stands with one on the beach','on a battlefield over the ocean','on a rocky beach']
-    heads = ['4 spots someone up ahead','5 and 7 work at the hotel and are waiting by the doors peering out the glass for someone',
-    '3 eyes someone outside of the office','3 opens the door for the detectives with a calm demeanor','4 looks back as he crosses',
-    'in a gatehouse of an airport','at an airport entrance','on the sstreet','outside the staff entrance']
+    events = ['4 spots someone up ahead','5 and 7 work at the hotel and are waiting by the doors peering out the glass for someone',
+    '3 eyes someone outside of the office','3 opens the door for the detectives with a calm demeanor','4 looks back as he crosses']
+    places = ['in a gatehouse of an airport','at an airport entrance','on the sstreet','outside the staff entrance']
     print("Original lighthouse---------------")
-    print(heads)
+    print(events)
     comet = Comet("./comet-atomic_2020_BART")
-    res = comet.get_groundings(heads, 'concepts')
+    res = comet.get_groundings(events, places, 'concepts')
     print("Concepts.....")
     print(res)
-    res = comet.get_groundings(heads, 'attributes')
+    res = comet.get_groundings(events, places, 'attributes')
     print("Attributes...")
     print(res)
-    res = comet.get_groundings(heads,'person','somebody')
+    res = comet.get_groundings(events, places, 'person','somebody')
     print("Persons, grounded by \"somebody\"")
     print(res)
-    res = comet.get_groundings(heads,'triplet')
+    res = comet.get_groundings(events, places, 'triplet')
     print("Triplets")
     print(res)
     # results = results1[0] + results2[0]
