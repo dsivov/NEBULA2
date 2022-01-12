@@ -16,7 +16,8 @@ from nebula_api.nebula_enrichment_api import NRE_API
 
 from nebula_api.mdmmt_api.mdmmt_api import MDMMT_API
 import urllib.request
-
+import itertools
+import spacy
 
 class VCOMET_KG:
     def __init__(self):
@@ -32,10 +33,11 @@ class VCOMET_KG:
         self.gdb = self.nre.gdb
         self.mdmmt = MDMMT_API()
         self.temp_file = "/tmp/video_name.mp4" 
+        self.en = spacy.load('en_core_web_sm')
         
     def download_video_file(self, movie):
-        if os.path.exists('/tmp/video_file.mp4'):
-            os.remove('/tmp/video_file.mp4')
+        if os.path.exists('/tmp/video_file_dima.mp4'):
+            os.remove('/tmp/video_file_dima.mp4')
         query = 'FOR doc IN Movies FILTER doc._id == "{}" RETURN doc'.format(movie)
         cursor = self.db.aql.execute(query)
         url_prefix = "http://ec2-3-120-189-231.eu-central-1.compute.amazonaws.com:7000/"
@@ -210,31 +212,81 @@ class VCOMET_KG:
                 "Movies/114206548"
                 ])
 
-def main():
+    def insert_playgound_embeddings(self):
+        vc_collection = self.db.collection("nebula_vcomet_lighthouse")
+        movies = self.get_playground_movies()
+        for movie in movies:
+            stage_data, url_link = self.get_places_and_events_for_scene(movie)
+            for s in stage_data:
+                s['movie'] = movie
+                s['url_link'] = url_link
+                vc_collection.insert(s)
    
+    def test_split(self, text):
+        #import deplacy
+       
+        splits = []
+        #text = 'man is holding onto a mackeral and tossing his head back laughing with somebody else'
+        doc = self.en(text)
+        #deplacy.render(doc)
+
+        seen = set() # keep track of covered words
+
+        chunks = []
+        for sent in doc.sents:
+            heads = [cc for cc in sent.root.children if cc.dep_ == 'conj']
+
+            for head in heads:
+                words = [ww for ww in head.subtree]
+                for word in words:
+                    seen.add(word)
+                chunk = (' '.join([ww.text for ww in words]))
+                chunks.append( (head.i, chunk) )
+
+            unseen = [ww for ww in sent if ww not in seen]
+            chunk = ' '.join([ww.text for ww in unseen])
+            chunks.append( (sent.root.i, chunk) )
+
+        chunks = sorted(chunks, key=lambda x: x[0])
+
+        for ii, chunk in chunks:
+            splits.append(chunk)
+        return(splits)
+
+    def get_text_img_score(self, text, img_emb):
+        text_emb = self.encode_text(text)
+        text_emb = text_emb / np.linalg.norm(text_emb)
+        return np.sum((text_emb * img_emb))
+    
+    def get_top_k_from_proposed(self,top_k, proposed, embedding_array):
+        proposed_map = {}
+        candidates_text = []
+        candidates_score = []
+        for ev in tqdm(proposed):
+                score = self.get_text_img_score(ev, embedding_array)
+                proposed_map[score] = ev
+        top_k = heapq.nlargest(top_k, proposed_map)
+        for k in top_k:
+            candidates_score.append(k)
+            candidates_text.append(proposed_map[k])
+            print (k, "->", proposed_map[k])
+        return(candidates_score ,candidates_text)
+    
+  
+def main():  
     kg = VCOMET_KG()
-    #vc_collection = kg.db.create_collection("nebula_vcomet_lighthouse")
-    vc_collection = kg.db.collection("nebula_vcomet_lighthouse")
     movies = kg.get_playground_movies()
     for movie in movies:
-        stage_data, url_link = kg.get_places_and_events_for_scene(movie)
-        for s in stage_data:
-            s['movie'] = movie 
-            s['url_link'] = url_link
-            vc_collection.insert(s)
-            #print(s)
-
-        
-    #movie = 'Movies/92361646'
-    #movie = 'Movies/114208744'
-    #movie = 'Movies/92360929'
-    #movie = 'Movies/92362249'
-    #movie = 'Movies/114208149'
-    #movie = 'Movies/114208637'
-    #movie='Movies/114206264'
-    #kg.get_places_and_events_for_scene(movie)
-    #kg.download_video_file(movie)
-
+        data = kg.nre.get_vcomet_data(movie)
+        for scene_element in data:
+            start_ = scene_element['start']
+            stop_ = scene_element['stop']
+            #vector, url = kg.mdmmt_video_encode(start_, stop_, movie)
+            #if url:
+            events = []
+            proposed_events = []
+            for event in scene_element['events']:
+                print(event)
 #zeroshot_weights = zeroshot_classifier(imagenet_classes, imagenet_templates)
 if __name__ == "__main__":
     main()
