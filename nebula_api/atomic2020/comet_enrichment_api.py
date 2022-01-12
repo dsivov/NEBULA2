@@ -117,12 +117,11 @@ class Comet:
             for place in places:
                 pplaces.append("person " + place)
         lighthouses = events + pplaces
-        print(lighthouses)
-        input()
+        #print(lighthouses)
         groundings = []
         for lighthouse in lighthouses:
             lighthouse = re.sub("\d+", "person", lighthouse)
-            print(lighthouse)
+            #print(lighthouse)
             for rel in relations:
                 queries = []  
                 query = "{} {} [GEN]" .format(lighthouse, rel)
