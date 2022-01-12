@@ -1,14 +1,14 @@
-
 from posixpath import basename
+from typing import Counter
 from scenedetect.video_splitter import split_video_ffmpeg, is_ffmpeg_available
 # Standard PySceneDetect imports:
 from scenedetect import VideoManager, scene_detector
 from scenedetect import SceneManager
 # For content-aware scene detection:
 from scenedetect.detectors import ContentDetector
-import os
 from pickle import STACK_GLOBAL
 import cv2
+import os
 import logging
 import uuid
 from arango import ArangoClient
@@ -19,6 +19,7 @@ import glob
 import redis
 import boto3
 import json
+import csv
 
 class NEBULA_SCENE_DETECTOR():
     def __init__(self):
@@ -337,18 +338,35 @@ class NEBULA_SCENE_DETECTOR():
         }
         return processed_dict
 
-    def proprocess_dataset(self, dataset_path):
+    def preprocess_dataset(self, dataset_path, db_type="COMET"):
+        
         new_db = []
-        test_json = open(dataset_path)
-        data = json.load(test_json)
-        for idx, key in enumerate(data):
-            if "lsmdc" in key['img_fn']:
-                new_key = self.get_frame_dict(key)
-                new_db.append(new_key)
+        if db_type == "COMET":
+            test_json = open(dataset_path)
+            data = json.load(test_json)
+            for idx, key in enumerate(data):
+                if "lsmdc" in key['img_fn']:
+                    new_key = self.get_frame_dict(key)
+                    new_db.append(new_key)
+
+        elif db_type == "LSMDC":
+            with open(dataset_path) as csv_file:
+                csv_reader = csv.reader(csv_file, delimiter=',')
+                for row in csv_reader:
+                    key = row[0].split()[0]
+                    txt = ''
+                    if len(row) > 1:
+                        txt = row[1]
+                    new_db.append({'clip_id': key, 'txt': txt})
+            return new_db
+        else: #db_type is LSMDC
+            print("Unknown DB-TYPE")
+
         return new_db
 
     # Merge all annotations for the same frame in VisualCOMET
     def merge_clip_ids(self, dataset):
+        # counter = 0
         new_dataset = []
 
         prev_clip = dataset[0]
@@ -386,6 +404,8 @@ class NEBULA_SCENE_DETECTOR():
                         
                         if obj['after'] != cur_clip['after']:
                             obj['after'] += cur_clip['after']
+                        
+                        # counter += 1
 
                 # If we don't have the current fn in our list of dics, so we add the current dict with that new frame
                 if not found_same_fn:
@@ -407,8 +427,7 @@ class NEBULA_SCENE_DETECTOR():
                         temp_lst.append(cur_clip)
                         temp_lst.append(prev_clip)
                         cur_clip = temp_lst
-                        # Remove the previous frame because it's already in our list of dicts.
-                        # del dataset[i - 1]
+
                     else:
                         if prev_clip['place'] != cur_clip['place']:
                             cur_clip['place'] += (", " + prev_clip['place'])
@@ -424,49 +443,95 @@ class NEBULA_SCENE_DETECTOR():
                         
                         if prev_clip['after'] != cur_clip['after']:
                             cur_clip['after'] += prev_clip['after']
-                        
-                        # Remove previous frame because we concatenated its contents to our current SIMILAR frame
-                        # del dataset[i - 1]
+
+                        # counter += 1
 
                 prev_clip = cur_clip
                 dataset[i] = prev_clip
-            # We always delete previous dataset dict because we use it by merging it with current dict.
+
+        # print(counter)
         return new_dataset
 
 
+    def merge_comet_in_lsmdc(self, lsmdc_datasets, comet_dataset):
+        found_keys = 0
 
+        temp_comet_dataset = []
+        merged_dbs = []
+        # Converting list to dict so we can check keys in O(1)
+        # comet_ds = Counter(comet_dataset['clip_id'])
+
+        for lsmdc_ds in lsmdc_datasets:
+            lsmdc_ds_clip_ids_dict = {k['clip_id']: idx for idx, k in enumerate(lsmdc_ds)}
+            for idx, comet_key in enumerate(comet_dataset):
+                if isinstance(comet_key, list):
+                    cur_comet_key = comet_key[0]['clip_id']
+                    # found_keys += len(comet_key) - 1
+                else:
+                    cur_comet_key = comet_key['clip_id']
+
+                if cur_comet_key in lsmdc_ds_clip_ids_dict:
+                    found_keys += 1
+                    if isinstance(comet_key, list):
+                        temp_comet_dataset.append(comet_key)
+                    else:
+                        temp_comet_dataset.append(comet_dataset[idx])
+                    
+                    index_in_lsmdc = lsmdc_ds_clip_ids_dict[cur_comet_key]
+                    lsmdc_clip_details = lsmdc_ds[index_in_lsmdc]
+                    vscomet_clip_details = comet_key
+                    merged_dbs.append({'lsmdc': [lsmdc_clip_details],
+                                        'vscomet': [vscomet_clip_details]})
+
+        
+        return merged_dbs
 
 
 
         
 
 
-    def parse_comet_to_lsmdc(self, upload_dir):
+    def parse_comet_to_lsmdc(self, comet_dir, lsmdc_dir):
 
-        # Paths to .JSONs
-        train_path = os.path.join(upload_dir, "train_annots.json")
-        val_path = os.path.join(upload_dir, "val_annots.json")
-        test_path = os.path.join(upload_dir, "test_annots.json")
+        ### VISUAL COMET ###
 
-        # Parsed .JSONs for LSMDC dataset
-        train_dict = self.proprocess_dataset(train_path)
-        val_dict = self.proprocess_dataset(val_path)
-        test_dict = self.proprocess_dataset(test_path)
+        # Paths to VISUAL COMET .JSONs
+        comet_train_path = os.path.join(comet_dir, "train_annots.json")
+        comet_val_path = os.path.join(comet_dir, "val_annots.json")
+        comet_test_path = os.path.join(comet_dir, "test_annots.json")
 
-        # Sort JSONs
-        train_dict = sorted(train_dict, key=lambda d: d['clip_id'])
-        val_dict = sorted(val_dict, key=lambda d: d['clip_id'])
-        test_dict = sorted(test_dict, key=lambda d: d['clip_id'])
+        # Parsed COMET .JSONs for LSMDC dataset
+        comet_train_dict = self.preprocess_dataset(comet_train_path, "COMET")
+        comet_val_dict = self.preprocess_dataset(comet_val_path, "COMET")
+        comet_test_dict = self.preprocess_dataset(comet_test_path, "COMET")
+
+        # Sort COMET JSONs
+        comet_train_dict = sorted(comet_train_dict, key=lambda d: d['clip_id'])
+        comet_val_dict = sorted(comet_val_dict, key=lambda d: d['clip_id'])
+        comet_test_dict = sorted(comet_test_dict, key=lambda d: d['clip_id'])
 
         # Merge all annotations for the same frame
-        comet_train_dict = self.merge_clip_ids(train_dict)
-        comet_val_dict = self.merge_clip_ids(val_dict)
-        comet_test_dict = self.merge_clip_ids(test_dict)
+        comet_train_dict = self.merge_clip_ids(comet_train_dict)
+        comet_val_dict = self.merge_clip_ids(comet_val_dict)
+        comet_test_dict = self.merge_clip_ids(comet_test_dict)
 
-        # Load LSMDC datasets
-        
+        ### LSMDC ###
 
-        a=0
+        # Paths to LSMDC .JSONs
+        lsmdc_train_path = os.path.join(lsmdc_dir, "LSMDC16_annos_training.csv")
+        lsmdc_val_path = os.path.join(lsmdc_dir, "LSMDC16_annos_val.csv")
+        lsmdc_test_path = os.path.join(lsmdc_dir, "LSMDC16_annos_test.csv")
+
+        # Process LSMDC annotation files
+        lsmdc_train_dict = self.preprocess_dataset(lsmdc_train_path, "LSMDC")
+        lsmdc_val_dict = self.preprocess_dataset(lsmdc_val_path, "LSMDC")
+        lsmdc_test_dict = self.preprocess_dataset(lsmdc_test_path, "LSMDC")
+
+        # find COMET's clips in LSMDC dataset 
+        lsmdc_datasets = [lsmdc_train_dict, lsmdc_val_dict, lsmdc_test_dict]
+        parsed_train_path = self.merge_comet_in_lsmdc(lsmdc_datasets, comet_train_dict)
+        parsed_val_path = self.merge_comet_in_lsmdc(lsmdc_datasets, comet_val_dict)
+        parsed_test_path = self.merge_comet_in_lsmdc(lsmdc_datasets, comet_test_dict)
         
 
 
@@ -477,7 +542,7 @@ class NEBULA_SCENE_DETECTOR():
 
 def main():
     scene_detector = NEBULA_SCENE_DETECTOR()
-    scene_detector.parse_comet_to_lsmdc("/dataset1/visualcomet/")
+    scene_detector.parse_comet_to_lsmdc("/dataset1/visualcomet/", "/dataset1/")
     # scene_detector.merge_movies("/dataset1/", "/dataset1/storage/")
     # scene_detector.new_movies_batch_processing()
 
