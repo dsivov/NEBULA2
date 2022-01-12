@@ -1,7 +1,7 @@
 import json
 import torch
 import re
-import argparse
+import spacy
 from tqdm import tqdm
 from pathlib import Path
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
@@ -53,6 +53,7 @@ class Comet:
         self.comcepts_relations = [ 
             "isFilledBy"
             ]
+        self.experts = []
 
     def generate(
             self, 
@@ -82,7 +83,41 @@ class Comet:
                 decs.append(dec)
 
             return decs
-   
+
+    def split_event(text):
+        #import deplacy
+        en =spacy.load('en_core_web_sm')
+        splits = []
+        #text = 'man is holding onto a mackeral and tossing his head back laughing with somebody else'
+        doc = en(text)
+        #deplacy.render(doc)
+
+        seen = set() # keep track of covered words
+
+        chunks = []
+        for sent in doc.sents:
+            heads = [cc for cc in sent.root.children if cc.dep_ == 'conj']
+
+            for head in heads:
+                words = [ww for ww in head.subtree]
+                for word in words:
+                    seen.add(word)
+                chunk = (' '.join([ww.text for ww in words]))
+                chunks.append( (head.i, chunk) )
+
+            unseen = [ww for ww in sent if ww not in seen]
+            chunk = ' '.join([ww.text for ww in unseen])
+            chunks.append( (sent.root.i, chunk) )
+
+        chunks = sorted(chunks, key=lambda x: x[0])
+
+        for ii, chunk in chunks:
+            splits.append(chunk)
+        return(splits)
+
+    def add_experts(self, experts):
+        self.experts = experts
+
     def check_triplet(self, triplet):
         triplet = triplet.split(' ')
         if len(triplet) < 4:
@@ -115,7 +150,12 @@ class Comet:
         
         if places:
             for place in places:
-                pplaces.append("person " + place)
+                if len(self.experts) == 0:
+                    pplaces.append("person " + place)
+                else: 
+                    for expert in self.experts:
+                        pplaces.append("person with " + expert + " " + place) 
+
         lighthouses = events + pplaces
         #print(lighthouses)
         groundings = []
@@ -156,11 +196,12 @@ if __name__ == "__main__":
     # '3 places someone ashes in the sea','man stands with one on the beach','on a battlefield over the ocean','on a rocky beach']
     events = ['4 spots someone up ahead','5 and 7 work at the hotel and are waiting by the doors peering out the glass for someone',
     '3 eyes someone outside of the office','3 opens the door for the detectives with a calm demeanor','4 looks back as he crosses',
-    'man quickly escorts someone down the lobby','the group move through the elevator']
+    '1 quickly escorts someone down the lobby','the group move through the elevator']
     places = ['in a gatehouse of an airport','at an airport entrance','on the sstreet','outside the staff entrance']
     print("Original lighthouse---------------")
     print(events)
     comet = Comet("./comet-atomic_2020_BART")
+    comet.add_experts(["passport"])
     res = comet.get_groundings(events, places, 'concepts')
     print("Concepts.....")
     print(res)
