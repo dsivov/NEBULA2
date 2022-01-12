@@ -105,10 +105,10 @@ class Comet:
             num_generate = 50
         elif type == 'triplet':
             relations = self.triplet_relations
-            num_generate = 10
+            num_generate = 50
         elif type == 'person':
             relations = self.person_relations
-            num_generate = 10
+            num_generate = 50
         else:
             print("Bad relation type: " + type)
         pplaces = []
@@ -155,7 +155,8 @@ if __name__ == "__main__":
     # '2 laughs with the others','1 - 5 stand over a freshly slaughtered hog',
     # '3 places someone ashes in the sea','man stands with one on the beach','on a battlefield over the ocean','on a rocky beach']
     events = ['4 spots someone up ahead','5 and 7 work at the hotel and are waiting by the doors peering out the glass for someone',
-    '3 eyes someone outside of the office','3 opens the door for the detectives with a calm demeanor','4 looks back as he crosses']
+    '3 eyes someone outside of the office','3 opens the door for the detectives with a calm demeanor','4 looks back as he crosses',
+    'man quickly escorts someone down the lobby','the group move through the elevator']
     places = ['in a gatehouse of an airport','at an airport entrance','on the sstreet','outside the staff entrance']
     print("Original lighthouse---------------")
     print(events)
