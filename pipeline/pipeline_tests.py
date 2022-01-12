@@ -216,11 +216,17 @@ def relative_distances(all_embeddings):
     return cos_dist, reg_dist
 
 
-def run_clip():
+def get_small_movies_ids():
     lsmdc_processor = LSMDCProcessor()
     all_movies = lsmdc_processor.get_all_movies()
     small_dataset = LSMDCSmallDataset(lsmdc_processor.db)
     all_ids = small_dataset.get_all_ids()
+
+    return all_movies, all_ids
+
+def run_clip():
+    all_movies, all_ids = get_small_movies_ids()
+
     clip_bench = NebulaVideoEvaluation()
     base_folder = '/dataset/lsmdc/avi/'
     thresholds = [0.8]
@@ -238,7 +244,7 @@ def run_clip():
         # print(doc)
         if doc['url_link'].split('/')[-1] == '1031_Quantum_of_Solace_00_52_35_159-00_52_37_144.mp4':
             print(1)
-        print(doc['url_link'])
+        print(doc)
 
     paragraph_pegasus = []
     all_embeddings = []
@@ -247,7 +253,7 @@ def run_clip():
         movie_name = base_folder + movie['path']
         print(movie['path'])
         # if movie_name != '/dataset/lsmdc/avi/1031_Quantum_of_Solace/1031_Quantum_of_Solace_00.39.09.510-00.39.14.286.avi':
-        if movie_name != '/dataset/lsmdc/avi/1031_Quantum_of_Solace/1031_Quantum_of_Solace_00.52.35.159-00.52.37.144.avi':
+        if movie_name != '/dataset/lsmdc/avi/1031_Quantum_of_Solace/1031_Quantum_of_Solace_00.39.09.510-00.39.14.286.avi':
             continue
         embedding_list, boundaries = clip_bench.create_clip_representation(movie_name, thresholds=thresholds, method='single')
         save_name = movie['path'][movie['path'].find('/') + 1:-4] + '_clip.pickle'
@@ -399,6 +405,59 @@ def test_locations2():
             pass
 
 
+def get_lighthouse_for_movie(movie_name):
+    db_nebula_dev = connect_db('nebula_development')
+    base_address = '\'http://ec2-3-120-189-231.eu-central-1.compute.amazonaws.com:7000/static/development/'
+    # query = 'FOR doc IN nebula_vcomet_lighthouse RETURN doc'
+
+    # Get the based movie name (without location in the movie)
+    full_url = base_address + movie_name.split('/')[-1].replace('.', '_')[:-4] + '.mp4\''
+
+    query = 'FOR doc IN nebula_vcomet_lighthouse FILTER doc.url_link == ' + full_url + ' RETURN doc'
+
+    cursor = db_nebula_dev.aql.execute(query, ttl=3600)
+    doc_list = []
+    for doc in cursor:
+        doc_list.append(doc)
+
+    return doc_list
+
+
+
+
+def run_lighthouse_fusion():
+    all_movies, all_ids = get_small_movies_ids()
+    clip_bench = NebulaVideoEvaluation()
+    thresholds = [0.8]
+    base_folder = '/dataset/lsmdc/avi/'
+
+    # db_nebula_dev = connect_db('nebula_development')
+    # query = 'FOR doc IN nebula_vcomet_lighthouse RETURN doc'
+    # cursor = db_nebula_dev.aql.execute(query, ttl=3600)
+    # doc_list = []
+    # for doc in cursor:
+    #     doc_list.append(doc)
+
+    # Go over all movies
+    for id in all_ids:
+        movie = all_movies[int(id['movie_id'])]
+        movie_name = base_folder + movie['path']
+        print(movie['path'])
+        light_house = get_lighthouse_for_movie(movie_name)
+        embedding_list, boundaries = clip_bench.create_clip_representation(movie_name, thresholds=thresholds,
+                                                                           method='single')
+        
+
+
+        # Go over all embeddings
+        for k in range(embedding_list[0].shape[0]):
+            emb = embedding_list[0][k, :]
+
+            # Find the relevant lighthouses in the database
+
+
+
+
 if __name__ == '__main__':
 
     # text_results = 'all_text_single.pickle'
@@ -416,7 +475,10 @@ if __name__ == '__main__':
     # run_step()
     # Part 4 - run CLIP on all the data
     # test_clip_single_image()
-    run_clip()
+    # run_clip()
     # get_locations_for_lsmdc_movies()
     # test_locations()
     # create_triplets_from_clip()
+
+    # Lighthouse fusion
+    run_lighthouse_fusion()
