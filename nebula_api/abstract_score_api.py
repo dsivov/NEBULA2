@@ -40,12 +40,13 @@ class AS_API:
             return(1)
 
 def main():
-    concept = input()
-    ascore = AS_API()
-    score = ascore.get_score(concept)
-    path = ascore.get_path_to_root(concept)
-    print("ABSTRACTION SCORE: ", score)
-    print("FULL ABSTRACTION PATH: ",  path)
+    while True:
+        concept = input()
+        ascore = AS_API()
+        score = ascore.get_score(concept)
+        #path = ascore.get_path_to_root(concept)
+        print("ABSTRACTION SCORE: ", score)
+        #print("FULL ABSTRACTION PATH: ",  path)
 
 if __name__ == '__main__':
     main()
