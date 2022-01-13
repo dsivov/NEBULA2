@@ -8,6 +8,8 @@ import os
 import shutil
 import pickle
 
+from nebula_api.milvus_api import connect_db
+
 from nebula_api.milvus_api import MilvusAPI
 
 class LSMDCSmallDataset:
@@ -198,11 +200,33 @@ def test_clip_single_image():
 
     print(1)
 
-def run_clip():
+def relative_distances(all_embeddings):
+    all_embeddings_vec = np.array(all_embeddings)
+    cos_dist = np.zeros((all_embeddings_vec.shape[0], all_embeddings_vec.shape[0]))
+    reg_dist = np.zeros((all_embeddings_vec.shape[0], all_embeddings_vec.shape[0]))
+    for x in range(all_embeddings_vec.shape[0] - 1):
+        for y in range(x, all_embeddings_vec.shape[0]):
+            v1 = all_embeddings_vec[x, :] / np.linalg.norm(all_embeddings_vec[x, :])
+            v2 = all_embeddings_vec[y, :] / np.linalg.norm(all_embeddings_vec[y, :])
+            cos_dist[y, x] = np.dot(v1, v2)
+            cos_dist[x, y] = np.dot(v1, v2)
+            reg_dist[y, x] = np.linalg.norm(all_embeddings_vec[x, :] - all_embeddings_vec[y, :])
+            reg_dist[x, y] = reg_dist[y, x]
+
+    return cos_dist, reg_dist
+
+
+def get_small_movies_ids():
     lsmdc_processor = LSMDCProcessor()
     all_movies = lsmdc_processor.get_all_movies()
     small_dataset = LSMDCSmallDataset(lsmdc_processor.db)
     all_ids = small_dataset.get_all_ids()
+
+    return all_movies, all_ids
+
+def run_clip():
+    all_movies, all_ids = get_small_movies_ids()
+
     clip_bench = NebulaVideoEvaluation()
     base_folder = '/dataset/lsmdc/avi/'
     thresholds = [0.8]
@@ -213,13 +237,24 @@ def run_clip():
 
     location_list = LocationList()
 
+    db = connect_db('nebula_development')
+    query = 'FOR doc IN nebula_vcomet_lighthouse RETURN doc'
+    cursor = db.aql.execute(query, ttl=3600)
+    for doc in cursor:
+        # print(doc)
+        if doc['url_link'].split('/')[-1] == '1031_Quantum_of_Solace_00_52_35_159-00_52_37_144.mp4':
+            print(1)
+        print(doc)
+
     paragraph_pegasus = []
+    all_embeddings = []
     for id in all_ids:
         movie = all_movies[int(id['movie_id'])]
         movie_name = base_folder + movie['path']
         print(movie['path'])
-        # if movie_name != '/dataset/lsmdc/avi/1024_Identity_Thief/1024_Identity_Thief_00.01.43.655-00.01.47.807.avi':
-        #     continue
+        # if movie_name != '/dataset/lsmdc/avi/1031_Quantum_of_Solace/1031_Quantum_of_Solace_00.39.09.510-00.39.14.286.avi':
+        if movie_name != '/dataset/lsmdc/avi/1031_Quantum_of_Solace/1031_Quantum_of_Solace_00.39.09.510-00.39.14.286.avi':
+            continue
         embedding_list, boundaries = clip_bench.create_clip_representation(movie_name, thresholds=thresholds, method='single')
         save_name = movie['path'][movie['path'].find('/') + 1:-4] + '_clip.pickle'
         # with open(os.path.join(result_folder, save_name), 'wb') as handle:
@@ -229,6 +264,7 @@ def run_clip():
         movie_locations = []
         for k in range(embedding_list[0].shape[0]):
             emb = embedding_list[0][k, :]
+            all_embeddings.append(emb)
             search_scene_graph = scene_graph.search_vector(20, emb.tolist())
             paragraph_pegasus.append('SECTION ' + str(boundaries[0][k]))
             for x in range(20):
@@ -255,6 +291,9 @@ def run_clip():
             pickle.dump(movie_locations, handle)
 
     print(paragraph_pegasus)
+    cos_dist, reg_dist = relative_distances(all_embeddings)
+
+
 
     text_results = 'all_text_single.pickle'
     with open(os.path.join(result_folder, text_results), 'wb') as handle:
@@ -366,6 +405,59 @@ def test_locations2():
             pass
 
 
+def get_lighthouse_for_movie(movie_name):
+    db_nebula_dev = connect_db('nebula_development')
+    base_address = '\'http://ec2-3-120-189-231.eu-central-1.compute.amazonaws.com:7000/static/development/'
+    # query = 'FOR doc IN nebula_vcomet_lighthouse RETURN doc'
+
+    # Get the based movie name (without location in the movie)
+    full_url = base_address + movie_name.split('/')[-1].replace('.', '_')[:-4] + '.mp4\''
+
+    query = 'FOR doc IN nebula_vcomet_lighthouse FILTER doc.url_link == ' + full_url + ' RETURN doc'
+
+    cursor = db_nebula_dev.aql.execute(query, ttl=3600)
+    doc_list = []
+    for doc in cursor:
+        doc_list.append(doc)
+
+    return doc_list
+
+
+
+
+def run_lighthouse_fusion():
+    all_movies, all_ids = get_small_movies_ids()
+    clip_bench = NebulaVideoEvaluation()
+    thresholds = [0.8]
+    base_folder = '/dataset/lsmdc/avi/'
+
+    # db_nebula_dev = connect_db('nebula_development')
+    # query = 'FOR doc IN nebula_vcomet_lighthouse RETURN doc'
+    # cursor = db_nebula_dev.aql.execute(query, ttl=3600)
+    # doc_list = []
+    # for doc in cursor:
+    #     doc_list.append(doc)
+
+    # Go over all movies
+    for id in all_ids:
+        movie = all_movies[int(id['movie_id'])]
+        movie_name = base_folder + movie['path']
+        print(movie['path'])
+        light_house = get_lighthouse_for_movie(movie_name)
+        embedding_list, boundaries = clip_bench.create_clip_representation(movie_name, thresholds=thresholds,
+                                                                           method='single')
+        
+
+
+        # Go over all embeddings
+        for k in range(embedding_list[0].shape[0]):
+            emb = embedding_list[0][k, :]
+
+            # Find the relevant lighthouses in the database
+
+
+
+
 if __name__ == '__main__':
 
     # text_results = 'all_text_single.pickle'
@@ -385,5 +477,8 @@ if __name__ == '__main__':
     # test_clip_single_image()
     # run_clip()
     # get_locations_for_lsmdc_movies()
-    test_locations()
+    # test_locations()
     # create_triplets_from_clip()
+
+    # Lighthouse fusion
+    run_lighthouse_fusion()
