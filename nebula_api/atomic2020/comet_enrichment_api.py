@@ -6,6 +6,10 @@ from tqdm import tqdm
 from pathlib import Path
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 from nltk.corpus import words
+from nebula_api.nebula_enrichment_api import NRE_API
+# import amrlib
+# import penman
+
 from utils import calculate_rouge, use_task_specific_params, calculate_bleu_score, trim_batch
 
 
@@ -20,6 +24,9 @@ class Comet:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = AutoModelForSeq2SeqLM.from_pretrained(model_path).to(self.device)
         self.model.zero_grad()
+        self.nre = NRE_API()
+        # self.stog = amrlib.load_stog_model()
+        # self.gtos = amrlib.load_gtos_model()
         print("model loaded")
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
         task = "summarization"
@@ -130,20 +137,37 @@ class Comet:
         #     else:
         #         return(False)
         return(True)
-    
+        
+    def get_palyground_data(self, movie, scene_element):
+        events = []
+        places = []
+        lighthouses = self.nre.get_vcomet_data(movie_id)
+        for lh in lighthouses:
+            if lh['scene_element'] == scene_element:
+                for event in lh['events']:
+                    if event[0] >= 0.3:
+                        events.append(event[1][0])
+                for action in lh['actions']:
+                    if action[0] >= 0.35:
+                        events.append("PersonX " + action[1][0])
+                for place in lh['places']:
+                    if place[0] >= 0.3:
+                        places.append(place[1])
+        return(events, places)
+
     def get_groundings(self, events, places=None, type='concepts', person='person'):
         if type == 'concepts':
             relations = self.comcepts_relations
-            num_generate = 50
+            num_generate = 100
         elif type == 'attributes':
             relations = self.attributes_relations
-            num_generate = 50
+            num_generate = 10
         elif type == 'triplet':
             relations = self.triplet_relations
-            num_generate = 50
+            num_generate = 10
         elif type == 'person':
             relations = self.person_relations
-            num_generate = 50
+            num_generate = 10
         else:
             print("Bad relation type: " + type)
         pplaces = []
@@ -151,16 +175,18 @@ class Comet:
         if places:
             for place in places:
                 if len(self.experts) == 0:
-                    pplaces.append("person " + place)
+                    pplaces.append("PersonX " + place)
                 else: 
                     for expert in self.experts:
-                        pplaces.append("person with " + expert + " " + place) 
+                        pplaces.append("PersonX with " + expert + " " + place) 
 
         lighthouses = events + pplaces
         #print(lighthouses)
         groundings = []
         for lighthouse in lighthouses:
-            lighthouse = re.sub("\d+", "person", lighthouse)
+            lighthouse = re.sub("\d+", "PersonX", lighthouse,  count=1)
+            lighthouse = re.sub("\d+", "PersonY", lighthouse,  count=1)
+            lighthouse = re.sub("\d+", "PersonZ", lighthouse)
             #print(lighthouse)
             for rel in relations:
                 queries = []  
@@ -194,31 +220,33 @@ if __name__ == "__main__":
     # heads = ['2 is holding onto a mackeral and tossing his head back laughing with 1','4 growls at the start of the battle',
     # '2 laughs with the others','1 - 5 stand over a freshly slaughtered hog',
     # '3 places someone ashes in the sea','man stands with one on the beach','on a battlefield over the ocean','on a rocky beach']
-    events = ['4 spots someone up ahead','5 and 7 work at the hotel and are waiting by the doors peering out the glass for someone',
-    '3 eyes someone outside of the office','3 opens the door for the detectives with a calm demeanor','4 looks back as he crosses',
-    '1 quickly escorts someone down the lobby','the group move through the elevator']
-    places = ['in a gatehouse of an airport','at an airport entrance','on the sstreet','outside the staff entrance']
+    # events = ['4 spots someone up ahead','5 and 7 work at the hotel and are waiting by the doors peering out the glass for someone',
+    # '3 eyes someone outside of the office','3 opens the door for the detectives with a calm demeanor','4 looks back as he crosses',
+    # '1 quickly escorts someone down the lobby','the group move through the elevator']
+    # places = ['in a gatehouse of an airport','at an airport entrance','on the sstreet','outside the staff entrance']
+    #movie_id = 'Movies/114206548'
+    movie_id = 'Movies/114208744'
+    comet = Comet("./comet-atomic_2020_BART")
+    events, places = comet.get_palyground_data(movie_id, 0)
+    
     print("Original lighthouse---------------")
     print(events)
-    comet = Comet("./comet-atomic_2020_BART")
-    comet.add_experts(["passport"])
+    print("Places")
+    print(places)
+    # comet.add_experts(["passport"])
     res = comet.get_groundings(events, places, 'concepts')
     print("Concepts.....")
     print(res)
     res = comet.get_groundings(events, places, 'attributes')
     print("Attributes...")
     print(res)
-    res = comet.get_groundings(events, places, 'person','somebody')
-    print("Persons, grounded by \"somebody\"")
+    res = comet.get_groundings(events, places, 'person','PersonX')
+    print("Persons, grounded by \"PersonX\"")
     print(res)
     res = comet.get_groundings(events, places, 'triplet')
     print("Triplets")
     print(res)
-    # results = results1[0] + results2[0]
-    # results = list(dict.fromkeys(results))
-    # for res in results:
-    #     print(res)
-    # input()
     
+   
     
       
