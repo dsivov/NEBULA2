@@ -10,7 +10,7 @@ from nebula_api.nebula_enrichment_api import NRE_API
 # import amrlib
 # import penman
 
-from .utils import calculate_rouge, use_task_specific_params, calculate_bleu_score, trim_batch
+from utils import calculate_rouge, use_task_specific_params, calculate_bleu_score, trim_batch
 
 
 def chunks(lst, n):
@@ -47,7 +47,6 @@ class Comet:
         ]
         self.person_relations = [
             "xEffect", 
-            "xReact",
             "xWant",
             "xIntent",
             "xNeed"
@@ -55,6 +54,7 @@ class Comet:
         self.attributes_relations = [ 
             #"InstanceOf",
             #"MadeUpOf",
+            "xReact",
             "xAttr"
             ]
         self.comcepts_relations = [ 
@@ -155,6 +155,22 @@ class Comet:
                         places.append(place[1])
         return(events, places)
 
+    def get_verbs(self, lighthouses):
+        relations = self.person_relations
+        num_generate = 40
+        for lighthouse in lighthouses:
+            lighthouse = re.sub("\d+", "PersonX", lighthouse,  count=1)
+            lighthouse = re.sub("\d+", "PersonY", lighthouse,  count=1)
+            lighthouse = re.sub("\d+", "PersonZ", lighthouse)
+            #print(lighthouse)
+            for rel in relations:
+                queries = []  
+                query = "{} {} [GEN]" .format(lighthouse, rel)
+                queries.append(query)
+                print(rel)
+                results = self.generate(queries, decode_method="beam", num_generate = num_generate)
+                print(results)
+            
     def get_groundings(self, events, places=None, type='concepts', person='person'):
         if type == 'concepts':
             relations = self.comcepts_relations
@@ -227,26 +243,26 @@ if __name__ == "__main__":
     #movie_id = 'Movies/114206548'
     movie_id = 'Movies/114208744'
     comet = Comet("./comet-atomic_2020_BART")
-    events, places = comet.get_palyground_data(movie_id, 0)
+    events, places = comet.get_playground_data(movie_id, 0)
     
-    print("Original lighthouse---------------")
-    print(events)
-    print("Places")
-    print(places)
-    # comet.add_experts(["passport"])
-    res = comet.get_groundings(events, places, 'concepts')
-    print("Concepts.....")
-    print(res)
-    res = comet.get_groundings(events, places, 'attributes')
-    print("Attributes...")
-    print(res)
-    res = comet.get_groundings(events, places, 'person','PersonX')
-    print("Persons, grounded by \"PersonX\"")
-    print(res)
-    res = comet.get_groundings(events, places, 'triplet')
-    print("Triplets")
-    print(res)
-    
+    # print("Original lighthouse---------------")
+    # print(events)
+    # print("Places")
+    # print(places)
+    # # comet.add_experts(["passport"])
+    # res = comet.get_groundings(events, places, 'concepts')
+    # print("Concepts.....")
+    # print(res)
+    # res = comet.get_groundings(events, places, 'attributes')
+    # print("Attributes...")
+    # print(res)
+    # res = comet.get_groundings(events, places, 'person','PersonX')
+    # print("Persons, grounded by \"PersonX\"")
+    # print(res)
+    # res = comet.get_groundings(events, places, 'triplet')
+    # print("Triplets")
+    # print(res)
+    comet.get_verbs(events)
    
     
       
