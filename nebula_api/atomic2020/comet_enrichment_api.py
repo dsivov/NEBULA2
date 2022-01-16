@@ -10,7 +10,7 @@ from nebula_api.nebula_enrichment_api import NRE_API
 # import amrlib
 # import penman
 
-from utils import calculate_rouge, use_task_specific_params, calculate_bleu_score, trim_batch
+from .utils import calculate_rouge, use_task_specific_params, calculate_bleu_score, trim_batch
 
 
 def chunks(lst, n):
@@ -138,7 +138,7 @@ class Comet:
         #         return(False)
         return(True)
         
-    def get_palyground_data(self, movie, scene_element):
+    def get_playground_data(self, movie_id, scene_element):
         events = []
         places = []
         lighthouses = self.nre.get_vcomet_data(movie_id)
@@ -193,7 +193,7 @@ class Comet:
                 query = "{} {} [GEN]" .format(lighthouse, rel)
                 queries.append(query)
                 #print(rel)
-                results = comet.generate(queries, decode_method="beam", num_generate = num_generate)
+                results = self.generate(queries, decode_method="beam", num_generate = num_generate)
                 for result in results:
                     for grounding in result:
                         if type == 'person':
