@@ -43,7 +43,11 @@ class Comet:
             "HasSubevent",
             "RelatedTo", 
             "isAfter",
-            "isBefore" 
+            "isBefore",
+            "xEffect", 
+            "xWant",
+            "xIntent",
+            "xNeed" 
         ]
         self.person_relations = [
             "xEffect", 
@@ -82,7 +86,7 @@ class Comet:
                     input_ids=input_ids,
                     attention_mask=attention_mask,
                     decoder_start_token_id=self.decoder_start_token_id,
-                    num_beams=num_generate,
+                    num_beams=num_generate *2,
                     num_return_sequences=num_generate,
                     )
 
@@ -91,7 +95,7 @@ class Comet:
 
             return decs
 
-    def split_event(text):
+    def split_event(self, text):
         #import deplacy
         en =spacy.load('en_core_web_sm')
         splits = []
@@ -144,12 +148,13 @@ class Comet:
         lighthouses = self.nre.get_vcomet_data(movie_id)
         for lh in lighthouses:
             if lh['scene_element'] == scene_element:
+                print(lh['scene_element'])
                 for event in lh['events']:
                     if event[0] >= 0.3:
                         events.append(event[1][0])
                 for action in lh['actions']:
                     if action[0] >= 0.35:
-                        events.append("PersonX " + action[1][0])
+                        events.append(action[1][0])
                 for place in lh['places']:
                     if place[0] >= 0.3:
                         places.append(place[1])
@@ -180,30 +185,43 @@ class Comet:
             num_generate = 10
         elif type == 'triplet':
             relations = self.triplet_relations
-            num_generate = 10
+            num_generate = 20
         elif type == 'person':
             relations = self.person_relations
             num_generate = 10
         else:
             print("Bad relation type: " + type)
         pplaces = []
+        pevents = []
         
         if places:
             for place in places:
-                if len(self.experts) == 0:
-                    pplaces.append("PersonX " + place)
-                else: 
-                    for expert in self.experts:
-                        pplaces.append("PersonX with " + expert + " " + place) 
+                pplaces.append(place)
 
-        lighthouses = events + pplaces
-        #print(lighthouses)
-        groundings = []
+        for event in events:
+            simple_events = self.split_event(event)
+            for sevent in simple_events:
+                pevents.append(sevent)
+        
+        lighthouses = pevents + pplaces
+
+        if len(self.experts) == 0:
+            personx = ' PersonX'
+        else:
+            for expert in self.experts:
+                personx = personx + " and " + expert
+        print(personx)
+        groundings_map = {}
         for lighthouse in lighthouses:
-            lighthouse = re.sub("\d+", "PersonX", lighthouse,  count=1)
+            groundings = []
+           
+            lighthouse, count = re.subn("\d+", personx, lighthouse,  count=1)
             lighthouse = re.sub("\d+", "PersonY", lighthouse,  count=1)
             lighthouse = re.sub("\d+", "PersonZ", lighthouse)
-            #print(lighthouse)
+           
+            if count < 1:
+                lighthouse = " PersonX " + lighthouse
+            print(lighthouse)
             for rel in relations:
                 queries = []  
                 query = "{} {} [GEN]" .format(lighthouse, rel)
@@ -212,21 +230,37 @@ class Comet:
                 results = self.generate(queries, decode_method="beam", num_generate = num_generate)
                 for result in results:
                     for grounding in result:
-                        if type == 'person':
-                            if rel == 'xNeed':
-                                grounding = person + " need" + grounding
-                            elif rel == 'xIntent':
-                                grounding = person + " intent" + grounding
-                            elif rel == 'xWant':
-                                grounding = person + " want" + grounding
-                            else:
-                                grounding = person + grounding
                         if type == 'triplet':
+                            if rel == 'xNeed':
+                                grounding = personx + " need" + grounding
+                            elif rel == 'xIntent':
+                                grounding = personx + " intent" + grounding
+                            elif rel == 'xWant':
+                                grounding = personx + " want" + grounding
+                            
+                        #if type == 'triplet':
                             if not self.check_triplet(grounding):
                                continue 
+                            grounding = grounding.replace("personx","PersonX")
+                            grounding = grounding.replace("Person x","PersonX")
+                            grounding = grounding.replace("Person X","PersonX")
+                            #grounding = grounding.replace("to","PersonX")
+                            grounding = grounding.replace("person x","PersonX")
+                            grounding = grounding.replace("they","PersonXY")
+                            #print(grounding.split()[0])
+                            if len(grounding.split()) > 1:
+                                if grounding.split()[0] == "to":
+                                    grounding = grounding.replace("to","PersonX", 1)
+                                elif grounding.split()[0] != "PersonX":
+                                    grounding = " PersonX" + grounding
+
                         groundings.append(grounding)
-        groundings = list(dict.fromkeys(groundings))
-        return(groundings)
+                        groundings = list(dict.fromkeys(groundings))
+                        #print(grounding)
+                groundings_map[lighthouse] = groundings
+            #input()
+        #groundings = list(dict.fromkeys(groundings))
+        return(groundings_map)
         
 
 if __name__ == "__main__":
@@ -241,8 +275,9 @@ if __name__ == "__main__":
     # '1 quickly escorts someone down the lobby','the group move through the elevator']
     # places = ['in a gatehouse of an airport','at an airport entrance','on the sstreet','outside the staff entrance']
     #movie_id = 'Movies/114206548'
-    movie_id = 'Movies/114208744'
+    movie_id = 'Movies/114206999'
     comet = Comet("./comet-atomic_2020_BART")
+    #Get data for movie, scene_element
     events, places = comet.get_playground_data(movie_id, 0)
     
     # print("Original lighthouse---------------")
@@ -250,19 +285,19 @@ if __name__ == "__main__":
     # print("Places")
     # print(places)
     # # comet.add_experts(["passport"])
-    # res = comet.get_groundings(events, places, 'concepts')
-    # print("Concepts.....")
-    # print(res)
+    res = comet.get_groundings(events, places, 'concepts')
+    print("Concepts.....")
+    print(res)
     # res = comet.get_groundings(events, places, 'attributes')
     # print("Attributes...")
     # print(res)
     # res = comet.get_groundings(events, places, 'person','PersonX')
     # print("Persons, grounded by \"PersonX\"")
     # print(res)
-    # res = comet.get_groundings(events, places, 'triplet')
-    # print("Triplets")
-    # print(res)
-    comet.get_verbs(events)
+    res = comet.get_groundings(events, places, 'triplet')
+    print("Triplets")
+    print(res)
+    #comet.get_verbs(events)
    
     
       
