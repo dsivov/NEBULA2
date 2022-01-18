@@ -6,7 +6,7 @@ from tqdm import tqdm
 from pathlib import Path
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 from nltk.corpus import words
-from utils import calculate_rouge, use_task_specific_params, calculate_bleu_score, trim_batch
+from nebula_api.atomic2020.utils import calculate_rouge, use_task_specific_params, calculate_bleu_score, trim_batch
 
 
 def chunks(lst, n):
@@ -127,7 +127,7 @@ class Comet:
                 query = "{} {} [GEN]" .format(lighthouse, rel)
                 queries.append(query)
                 #print(rel)
-                results = comet.generate(queries, decode_method="beam", num_generate = num_generate)
+                results = self.generate(queries, decode_method="beam", num_generate = num_generate)
                 for result in results:
                     for grounding in result:
                         if type == 'person':
@@ -161,6 +161,7 @@ if __name__ == "__main__":
     print("Original lighthouse---------------")
     print(events)
     comet = Comet("./comet-atomic_2020_BART")
+    # comet = Comet("/home/migakol/deployment/data/comet-atomic_2020_BART")
     res = comet.get_groundings(events, places, 'concepts')
     print("Concepts.....")
     print(res)
