@@ -549,4 +549,4 @@ if __name__ == '__main__':
     # It is done, by decomposing the lighthouse into components
     save_lighthouse_components()
     # part 2 - load the concepts and use them to generate permutations and compare them against CLIP
-    generate_sentences_from_lighthouse()
+    # generate_sentences_from_lighthouse()

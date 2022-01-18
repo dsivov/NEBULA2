@@ -10,7 +10,7 @@ from nebula_api.nebula_enrichment_api import NRE_API
 # import amrlib
 # import penman
 
-from utils import calculate_rouge, use_task_specific_params, calculate_bleu_score, trim_batch
+from nebula_api.atomic2020.utils import calculate_rouge, use_task_specific_params, calculate_bleu_score, trim_batch
 
 
 def chunks(lst, n):
