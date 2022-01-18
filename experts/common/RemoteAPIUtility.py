@@ -71,6 +71,8 @@ class RemoteAPIUtility:
                 'height': data['meta']['height'],
                 'last frame': data['last_frame'],
                 'movie_id': data['movie_id'],        # random identifier
+                'mdfs': data['mdfs'],
+                'scene_elements': data['scene_elements']
             })
 
         num_movies_found = len(all_infos)
