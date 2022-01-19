@@ -23,8 +23,8 @@ class LightHouseGenerator:
         attributes = self.comet.get_groundings(events, places, 'attributes')
         persons = self.comet.get_groundings(events, places, 'person', 'somebody')
         triplets = self.comet.get_groundings(events, places, 'triplet')
-        pass
-        return concepts, attributes, persons, triplets
+        verbs = self.comet.get_verbs(events)
+        return concepts, attributes, persons, triplets, verbs
 
     def generate_from_concepts(sel, concepts: list, attributes: list, persons: list, emb):
         """

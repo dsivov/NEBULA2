@@ -470,12 +470,12 @@ def save_lighthouse_components():
             actions = [ac[1][0] for ac in light_house[k]['actions']]
             places = [pl[1] for pl in light_house[k]['places']]
             # Find the relevant lighthouses in the database
-            concepts, attributes, persons, triplets = lh_gen.decompose_lighthouse(events=events, actions=actions,
+            concepts, attributes, persons, triplets, verbs = lh_gen.decompose_lighthouse(events=events, actions=actions,
                                                                                   places=places)
             # Save the data to save time
             save_name = f'/home/migakol/data/amr_tests/' + movie_name.split('/')[-1][0:-4] + f'_emb_{k:03d}.pkl'
             f = open(save_name, 'wb')
-            pickle.dump([concepts, attributes, persons, triplets], f)
+            pickle.dump([concepts, attributes, persons, triplets, verbs], f)
 
 
 def generate_sentences_from_lighthouse():
