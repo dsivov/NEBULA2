@@ -162,6 +162,25 @@ class Comet:
                         places.append(place[1])
         return(events, places)
 
+    def get_concepts(self, events, places):
+        concepts = self.get_groundings(events, places, type='concepts')
+        all_concepts = []
+        concepts_map = {}
+        for concept in concepts.values():
+            for cn in concept:
+                #print("Concepts: " + cn)
+                for w in cn.split():
+                    all_concepts = all_concepts + self.canon.get_concept_from_entity(w)
+        all_concepts = list(dict.fromkeys(all_concepts)) 
+        for ac in all_concepts:
+            #print(ac)
+            class_ = self.canon.get_class_of_entity(ac)
+            if class_ in concepts_map.keys():
+                concepts_map[class_] = concepts_map[class_] + [ac]
+            else:
+                concepts_map[class_] = [ac]
+        return(concepts_map)
+
     def get_verbs(self, lighthouses):
         relations = self.person_relations
         num_generate = 5
@@ -189,7 +208,7 @@ class Comet:
     def get_groundings(self, events, places=None, type='concepts', person='person'):
         if type == 'concepts':
             relations = self.comcepts_relations
-            num_generate = 100
+            num_generate = 10
         elif type == 'attributes':
             relations = self.attributes_relations
             num_generate = 10
@@ -231,7 +250,7 @@ class Comet:
            
             if count < 1:
                 lighthouse = " PersonX " + lighthouse
-            print(lighthouse)
+            #print(lighthouse)
             for rel in relations:
                 queries = []  
                 query = "{} {} [GEN]" .format(lighthouse, rel)
@@ -307,7 +326,7 @@ if __name__ == "__main__":
     # res = comet.get_groundings(events, places, 'triplet')
     # print("Triplets")
     # print(res)
-    print(comet.get_verbs(events))
+    print(comet.get_concepts(events, places))
    
     
       
