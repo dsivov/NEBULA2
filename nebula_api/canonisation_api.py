@@ -1,4 +1,6 @@
 from nltk.corpus import wordnet
+from nltk.stem.wordnet import WordNetLemmatizer
+
 #Please use the NLTK Downloader to obtain the resource:
 
 #  >>> import nltk
@@ -19,7 +21,8 @@ class CANON_API:
             return(1)
 
     def get_verb_from_concept(self, concept):
-        lem = wordnet.lemmas(concept, pos='v')
+        concept_presesnt = WordNetLemmatizer().lemmatize(concept,'v')
+        lem = wordnet.lemmas(concept_presesnt, pos='v')
         all_relations = []
         related_forms = [lem[i].synset() for i in range(len(lem))]
         for related_form in related_forms:
