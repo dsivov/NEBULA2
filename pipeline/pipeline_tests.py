@@ -1,6 +1,7 @@
 from benchmark.lsmdc_processor import LSMDCProcessor
 from benchmark.clip_benchmark import NebulaVideoEvaluation
 from benchmark.location_list import LocationList
+from nlp_tools.light_house_generator import LightHouseGenerator
 import numpy as np
 from pipeline.pipeline_master import Pipeline
 import experts.tracker.autotracker as at
@@ -414,18 +415,23 @@ def get_lighthouse_for_movie(movie_name):
     full_url = base_address + movie_name.split('/')[-1].replace('.', '_')[:-4] + '.mp4\''
 
     query = 'FOR doc IN nebula_vcomet_lighthouse FILTER doc.url_link == ' + full_url + ' RETURN doc'
+    # query = 'FOR doc IN nebula_vcomet_lighthouse RETURN doc'
 
     cursor = db_nebula_dev.aql.execute(query, ttl=3600)
     doc_list = []
     for doc in cursor:
         doc_list.append(doc)
 
+    # Rearrange the output structure. Here it is
+    # doc_list[0]['events'], doc_list[0]['actions'], doc_list[0]['places']
+    # doc_list[0]['events'], doc_list[1]['events']
+
     return doc_list
 
 
 
 
-def run_lighthouse_fusion():
+def save_lighthouse_components():
     all_movies, all_ids = get_small_movies_ids()
     clip_bench = NebulaVideoEvaluation()
     thresholds = [0.8]
@@ -438,25 +444,83 @@ def run_lighthouse_fusion():
     # for doc in cursor:
     #     doc_list.append(doc)
 
+    lh_gen = LightHouseGenerator()
+
     # Go over all movies
     for id in all_ids:
         movie = all_movies[int(id['movie_id'])]
         movie_name = base_folder + movie['path']
         print(movie['path'])
+
+        # if movie['path'] != '1005_Signs/1005_Signs_00.10.56.732-00.11.00.017.avi':
+        #     continue
+
         light_house = get_lighthouse_for_movie(movie_name)
+
         embedding_list, boundaries = clip_bench.create_clip_representation(movie_name, thresholds=thresholds,
                                                                            method='single')
-        
-
-
         # Go over all embeddings
         for k in range(embedding_list[0].shape[0]):
             emb = embedding_list[0][k, :]
 
+            # Slightly change the lighthouse format
+            if k >= len(light_house):
+                continue
+            events = [ev[1][0] for ev in light_house[k]['events']]
+            actions = [ac[1][0] for ac in light_house[k]['actions']]
+            places = [pl[1] for pl in light_house[k]['places']]
             # Find the relevant lighthouses in the database
+            concepts, attributes, persons, triplets = lh_gen.decompose_lighthouse(events=events, actions=actions,
+                                                                                  places=places)
+            # Save the data to save time
+            save_name = f'/home/migakol/data/amr_tests/' + movie_name.split('/')[-1][0:-4] + f'_emb_{k:03d}.pkl'
+            f = open(save_name, 'wb')
+            pickle.dump([concepts, attributes, persons, triplets], f)
 
 
+def generate_sentences_from_lighthouse():
+    all_movies, all_ids = get_small_movies_ids()
+    clip_bench = NebulaVideoEvaluation()
+    thresholds = [0.8]
+    base_folder = '/dataset/lsmdc/avi/'
 
+    # db_nebula_dev = connect_db('nebula_development')
+    # query = 'FOR doc IN nebula_vcomet_lighthouse RETURN doc'
+    # cursor = db_nebula_dev.aql.execute(query, ttl=3600)
+    # doc_list = []
+    # for doc in cursor:
+    #     doc_list.append(doc)
+
+    lh_gen = LightHouseGenerator()
+
+    # Go over all movies
+    for id in all_ids:
+        movie = all_movies[int(id['movie_id'])]
+        movie_name = base_folder + movie['path']
+        print(movie['path'])
+
+        # if movie['path'] != '1005_Signs/1005_Signs_00.10.56.732-00.11.00.017.avi':
+        #     continue
+
+        light_house = get_lighthouse_for_movie(movie_name)
+
+        embedding_list, boundaries = clip_bench.create_clip_representation(movie_name, thresholds=thresholds,
+                                                                           method='single')
+        # Go over all embeddings
+        for k in range(embedding_list[0].shape[0]):
+            emb = embedding_list[0][k, :]
+
+            # Slightly change the lighthouse format
+            if k >= len(light_house):
+                continue
+            events = [ev[1][0] for ev in light_house[k]['events']]
+            actions = [ac[1][0] for ac in light_house[k]['actions']]
+            places = [pl[1] for pl in light_house[k]['places']]
+            # Load the saved data
+            load_name = f'/home/migakol/data/amr_tests/' + movie_name.split('/')[-1][0:-4] + f'_emb_{k:03d}.pkl'
+            f = open(load_name, 'rb')
+            concepts, attributes, persons = pickle.load(f)
+            pass
 
 if __name__ == '__main__':
 
@@ -481,4 +545,8 @@ if __name__ == '__main__':
     # create_triplets_from_clip()
 
     # Lighthouse fusion
-    run_lighthouse_fusion()
+    # part 1 - generate concepts, attributes, and persons to speed up the subsequent lighthouse computations
+    # It is done, by decomposing the lighthouse into components
+    save_lighthouse_components()
+    # part 2 - load the concepts and use them to generate permutations and compare them against CLIP
+    # generate_sentences_from_lighthouse()
