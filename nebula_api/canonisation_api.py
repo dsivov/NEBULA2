@@ -18,6 +18,22 @@ class CANON_API:
         else:
             return(1)
 
+    def get_verb_from_concept(self, concept):
+        lem = wordnet.lemmas(concept, pos='v')
+        all_relations = []
+        related_forms = [lem[i].synset() for i in range(len(lem))]
+        for related_form in related_forms:
+            all_relations.append(related_form.lemmas()[0].name())
+            for rel in related_form.hypernyms():
+                all_relations.append(rel.lemmas()[0].name())
+            for rel in related_form.hyponyms():
+                all_relations.append(rel.lemmas()[0].name())
+        all_relations = list(dict.fromkeys(all_relations))
+        return(all_relations)
+
+            # for form in related_form:
+            #     print(form)
+
     def get_class_of_entity(self, concept):
         if len(wordnet.synsets(concept)) > 0:
             syn = wordnet.synsets(concept)[0]
@@ -87,7 +103,7 @@ def main():
        
         
         concept = input("Concept> ")
-        print(ascore.get_class_of_entity(concept))
+        print(ascore.get_verb_from_concept(concept))
 
 if __name__ == '__main__':
     main()
