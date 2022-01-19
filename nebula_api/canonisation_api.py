@@ -24,8 +24,8 @@ class CANON_API:
         related_forms = [lem[i].synset() for i in range(len(lem))]
         for related_form in related_forms:
             all_relations.append(related_form.lemmas()[0].name())
-            for rel in related_form.hypernyms():
-                all_relations.append(rel.lemmas()[0].name())
+            # for rel in related_form.hypernyms():
+            #     all_relations.append(rel.lemmas()[0].name())
             for rel in related_form.hyponyms():
                 all_relations.append(rel.lemmas()[0].name())
         all_relations = list(dict.fromkeys(all_relations))
