@@ -7,6 +7,7 @@ from pathlib import Path
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 from nltk.corpus import words
 from nebula_api.nebula_enrichment_api import NRE_API
+from nebula_api.canonisation_api import CANON_API
 # import amrlib
 # import penman
 
@@ -25,6 +26,7 @@ class Comet:
         self.model = AutoModelForSeq2SeqLM.from_pretrained(model_path).to(self.device)
         self.model.zero_grad()
         self.nre = NRE_API()
+        self.canon = CANON_API()
         # self.stog = amrlib.load_stog_model()
         # self.gtos = amrlib.load_gtos_model()
         print("model loaded")
@@ -162,7 +164,8 @@ class Comet:
 
     def get_verbs(self, lighthouses):
         relations = self.person_relations
-        num_generate = 40
+        num_generate = 5
+        all_posible_verbs = []
         for lighthouse in lighthouses:
             lighthouse = re.sub("\d+", "PersonX", lighthouse,  count=1)
             lighthouse = re.sub("\d+", "PersonY", lighthouse,  count=1)
@@ -172,9 +175,16 @@ class Comet:
                 queries = []  
                 query = "{} {} [GEN]" .format(lighthouse, rel)
                 queries.append(query)
-                print(rel)
+                #print(rel)
                 results = self.generate(queries, decode_method="beam", num_generate = num_generate)
-                print(results)
+                for res in results:
+                    for r in res:
+                        for verb in r.split():
+                            relations = self.canon.get_verb_from_concept(verb)
+                            for relation in relations:
+                                all_posible_verbs.append(relation)
+        all_posible_verbs = list(dict.fromkeys(all_posible_verbs))
+        return(all_posible_verbs)
             
     def get_groundings(self, events, places=None, type='concepts', person='person'):
         if type == 'concepts':
@@ -285,19 +295,19 @@ if __name__ == "__main__":
     # print("Places")
     # print(places)
     # # comet.add_experts(["passport"])
-    res = comet.get_groundings(events, places, 'concepts')
-    print("Concepts.....")
-    print(res)
+    # res = comet.get_groundings(events, places, 'concepts')
+    # print("Concepts.....")
+    # print(res)
     # res = comet.get_groundings(events, places, 'attributes')
     # print("Attributes...")
     # print(res)
     # res = comet.get_groundings(events, places, 'person','PersonX')
     # print("Persons, grounded by \"PersonX\"")
     # print(res)
-    res = comet.get_groundings(events, places, 'triplet')
-    print("Triplets")
-    print(res)
-    #comet.get_verbs(events)
+    # res = comet.get_groundings(events, places, 'triplet')
+    # print("Triplets")
+    # print(res)
+    print(comet.get_verbs(events))
    
     
       

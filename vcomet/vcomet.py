@@ -32,12 +32,12 @@ class VCOMET_KG:
         self.db = self.nre.db
         self.gdb = self.nre.gdb
         self.mdmmt = MDMMT_API()
-        self.temp_file = "/tmp/video_name.mp4" 
+        self.temp_file = "/home/ilan/git/NEBULA2/video_file.mp4" 
         self.en = spacy.load('en_core_web_sm')
         
     def download_video_file(self, movie):
-        if os.path.exists('/tmp/video_file_dima.mp4'):
-            os.remove('/tmp/video_file_dima.mp4')
+        if os.path.exists('/home/ilan/git/NEBULA2/video_file.mp4'):
+            os.remove('/home/ilan/git/NEBULA2/video_file.mp4')
         query = 'FOR doc IN Movies FILTER doc._id == "{}" RETURN doc'.format(movie)
         cursor = self.db.aql.execute(query)
         url_prefix = "http://ec2-3-120-189-231.eu-central-1.compute.amazonaws.com:7000/"
@@ -72,7 +72,7 @@ class VCOMET_KG:
             print(doc['after'])            
             print(doc['before'])            
 
-
+    # Bug in Movies/114206816 in stage 1
     def get_places_and_events_for_scene(self, movie):
         stages = self.get_stages(movie)
         movie_candidates = []
@@ -128,7 +128,7 @@ class VCOMET_KG:
                                     'actions': stage_candidates_actions
                                                         })
         return(movie_candidates, url_link)
-
+ 
     def mdmmt_video_encode(self, start_f, stop_f, movie):
         import sys
         mdmmt = self.mdmmt
@@ -152,7 +152,8 @@ class VCOMET_KG:
             return(None, None)
 
     def get_playground_movies(self):
-        return([
+        return(['Movies/114206816', 'Movies/114206849', 'Movies/114206892', 'Movies/114206952', 'Movies/114206999', 'Movies/114207139', 'Movies/114207205', 'Movies/114207240', 'Movies/114207265', 'Movies/114207324', 'Movies/114207361', 'Movies/114207398', 'Movies/114207441', 'Movies/114207474', 'Movies/114207499', 'Movies/114207550', 'Movies/114207668', 'Movies/114207740', 'Movies/114207781', 'Movies/114207810', 'Movies/114207839', 'Movies/114207908', 'Movies/114207953', 'Movies/114207984', 'Movies/114208064', 'Movies/114208149', 'Movies/114208196', 'Movies/114208338', 'Movies/114208367', 'Movies/114208576', 'Movies/114208637', 'Movies/114208744', 'Movies/114208777', 'Movies/114208820', 'Movies/114206358', 'Movies/114206264', 'Movies/114206337', 'Movies/114206397', 'Movies/114206632', 'Movies/114206597', 'Movies/114206691', 'Movies/114206789', 'Movies/114207184', 'Movies/114206548'])
+        """ [
                 "Movies/92354428",
                 "Movies/92357362",
                 "Movies/92356735",
@@ -210,10 +211,11 @@ class VCOMET_KG:
                 "Movies/114206789",
                 "Movies/114207184",
                 "Movies/114206548"
-                ])
+                ]
+                """
 
     def insert_playgound_embeddings(self):
-        vc_collection = self.db.collection("nebula_vcomet_lighthouse")
+        vc_collection = self.db.collection("nebula_vcomet_lighthouse_lsmdc")
         movies = self.get_playground_movies()
         for movie in movies:
             stage_data, url_link = self.get_places_and_events_for_scene(movie)
@@ -221,6 +223,24 @@ class VCOMET_KG:
                 s['movie'] = movie
                 s['url_link'] = url_link
                 vc_collection.insert(s)
+
+    def get_playgound_embeddings(self):
+        movies = self.get_playground_movies()
+        movies_dict = {}
+        for movie in movies:
+            stage_data, url_link = self.get_places_and_events_for_scene(movie)
+            movies_dict[movie] = []
+            print("\n #############################################")
+            print(movie + ", " + url_link)
+            print(url_link)
+            print("\n -----------------------------")
+            print("Number of scene elements: {}".format(len(stage_data)))
+            for s in stage_data:
+                movies_dict[movie].append(())
+                print(s['scene_element'])
+                print(s['start'])
+                print(s['stop'])
+
    
     def test_split(self, text):
         #import deplacy
@@ -274,19 +294,45 @@ class VCOMET_KG:
     
   
 def main():  
+
+    #bad = [movie = "Movies/114206816", 114207361 - wierd,]
     kg = VCOMET_KG()
-    movies = kg.get_playground_movies()
-    for movie in movies:
-        data = kg.nre.get_vcomet_data(movie)
-        for scene_element in data:
-            start_ = scene_element['start']
-            stop_ = scene_element['stop']
-            #vector, url = kg.mdmmt_video_encode(start_, stop_, movie)
-            #if url:
-            events = []
-            proposed_events = []
-            for event in scene_element['events']:
-                print(event)
+    kg.get_playgound_embeddings()
+    a=0
+    # test_clips = ['1040_The_Ugly_Truth_00.51.36.680-00.51.38.232', '1031_Quantum_of_Solace_00.52.35.159-00.52.37.144', '1008_Spider-Man2_00.37.21.781-00.37.25.010', '1031_Quantum_of_Solace_00.39.09.510-00.39.14.286', '1006_Slumdog_Millionaire_01.50.17.425-01.50.20.715', '1052_Harry_Potter_and_the_order_of_phoenix_00.14.58.068-00.15.00.314', '0028_The_Crying_Game_00.53.53.876-00.53.55.522', '0004_Charade_00.08.11.578-00.08.11.963', '1009_Spider-Man3_00.42.59.783-00.43.01.608', '0033_Amadeus_00.16.03.665-00.16.08.486', '1038_The_Great_Gatsby_00.57.29.452-00.57.31.831', '0017_Pianist_00.34.12.556-00.34.15.845', '1049_Harry_Potter_and_the_chamber_of_secrets_00.19.45.874-00.19.49.051', '0021_Rear_Window_00.27.37.810-00.27.39.810', '1038_The_Great_Gatsby_00.56.48.259-00.56.50.126', '1047_Defiance_01.31.42.519-01.31.46.181', '0009_Forrest_Gump_00.43.57.991-00.44.00.160', '1023_Horrible_Bosses_01.24.36.860-01.24.38.899', '1029_Pride_And_Prejudice_Disk_One_02.28.27.683-02.28.31.276', '1055_Marley_and_me_00.03.35.270-00.03.36.189', '0029_The_Graduate_00.04.51.868-00.04.53.081', '0025_THE_LORD_OF_THE_RINGS_THE_RETURN_OF_THE_KING_02.55.46.515-02.55.51.946', '1005_Signs_00.10.56.732-00.11.00.017', '0011_Gandhi_01.05.17.564-01.05.18.429', '0014_Ist_das_Leben_nicht_schoen_01.14.53.158-01.14.53.866', '1035_The_Adjustment_Bureau_00.01.40.825-00.01.46.814', '1024_Identity_Thief_00.01.43.655-00.01.47.807', '1035_The_Adjustment_Bureau_00.16.58.881-00.17.05.736', '1047_Defiance_00.52.07.009-00.52.07.978', '0014_Ist_das_Leben_nicht_schoen_00.01.45.481-00.02.06.641', '1043_Vantage_Point_00.38.48.473-00.38.52.599', '1010_TITANIC_00.41.32.072-00.41.40.196', '1047_Defiance_01.08.28.259-01.08.29.433', '0030_The_Hustler_01.21.48.576-01.21.52.523', '0001_American_Beauty_00.21.38.688-00.21.39.904', '1005_Signs_00.14.35.680-00.14.40.450', '1015_27_Dresses_00.38.02.757-00.38.08.213', '0004_Charade_00.27.44.212-00.27.44.742', '0002_As_Good_As_It_Gets_00.06.32.767-00.06.33.455', '0027_The_Big_Lebowski_01.46.45.804-01.46.49.607', '1034_Super_8_01.42.41.370-01.42.45.709', '0026_The_Big_Fish_00.17.37.555-00.17.42.606', '1052_Harry_Potter_and_the_order_of_phoenix_02.00.04.103-02.00.06.616', '0001_American_Beauty_01.45.48.324-01.46.01.008']
+    # for i, test_clip in enumerate(test_clips):
+    #     test_clips[i] = '_'.join(test_clips[i].rsplit('.', 6))
+    # kg = VCOMET_KG()
+    # clips = []
+    # movies_in_lsmdc = []
+    # movies = kg.get_playground_movies()
+    # for movie in movies:
+    #     data = kg.nre.get_vcomet_data(movie)  
+    #     cur_clip = data[0]['url_link'].split("/")[-1].replace(".mp4", "")
+    #     if cur_clip in test_clips:
+    #         clips.append(movie)
+    #         print(cur_clip)
+
+    #     # print("/n ############################################")    
+    #     # [print(i['places']) for i in data]
+    #     # [print(i['url_link']) for i in data]
+    #     # print('.'.join(data[0]['url_link'].split("/")[-1].replace(".mp4", "").rsplit('_', 6)))
+    #     # clips.append('.'.join(data[0]['url_link'].split("/")[-1].replace(".mp4", "").rsplit('_', 6)))
+    #     # print("/n ###########################################")
+    # print(clips)
+    # # kg.insert_playgound_embeddings()
+    # print("Done.")
+    
+
+    # for test_clip in test_clips:
+    #     test_clip_temp = ('_'.join(test_clips[0].rsplit('.', 6))
+    #     if test_clip_temp in clips:
+    #         movies_in_lsmdc()
+
+    
+
+
+    
 #zeroshot_weights = zeroshot_classifier(imagenet_classes, imagenet_templates)
 if __name__ == "__main__":
     main()
