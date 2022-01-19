@@ -4,14 +4,18 @@ warnings.filterwarnings("ignore")
 
 import sys
 import os
-try:
-    user_paths = os.environ['PYTHONPATH']
-except KeyError:
-    user_paths = "/"
-print(user_paths)    
-sys.path.append(user_paths+"/nebula_api/mdmmt_api/models/tensorflow_models/research/audioset/")
-sys.path.append(user_paths+"/nebula_api/mdmmt_api/models/tensorflow_models/research/audioset/vggish")
-sys.path.append(user_paths+"/nebula_api/mdmmt_api")
+# try:
+#     user_paths = os.environ['PYTHONPATH']
+# except KeyError:
+#     user_paths = "/"
+# print(user_paths)   
+
+# sys.path.append(user_paths+"/nebula_api/mdmmt_api/models/tensorflow_models/research/audioset/")
+# sys.path.append(user_paths+"/nebula_api/mdmmt_api/models/tensorflow_models/research/audioset/vggish")
+sys.path.append(os.path.join(os.path.dirname(__file__), 'models/tensorflow_models/research/audioset/'))
+sys.path.append(os.path.join(os.path.dirname(__file__), 'models/tensorflow_models/research/audioset/vggish'))
+sys.path.append(os.path.dirname(__file__))
+
 
 import torch
 torch.set_grad_enabled(False)
@@ -22,6 +26,7 @@ import numpy as np
 from nebula_api.mdmmt_api.models.tensorflow_models.research.audioset.vggish import vggish_input as vggish_input
 import subprocess
 
+user_paths = sys.modules['nebula_api'].__spec__.submodule_search_locations[0]
 
 from dumper import ffmpeg_audio_reader
 from dumper import read_frames_center_crop_batch
@@ -40,13 +45,13 @@ class NoAudio(Exception):
 
 class MDMMT_API():
     def __init__(self):
-        self.vggish_model = VGGish(ckpt_path=user_paths+'/nebula_api/mdmmt_api/ckpts/vggish_model.ckpt', per_batch_size=32)
-        self.vmz_model = VMZ_irCSN_152(user_paths+'/nebula_api/mdmmt_api/ckpts/irCSN_152_ig65m_from_scratch_f125286141.pth')
+        self.vggish_model = VGGish(ckpt_path=user_paths+'/mdmmt_api/ckpts/vggish_model.ckpt', per_batch_size=32)
+        self.vmz_model = VMZ_irCSN_152(user_paths+'/mdmmt_api/ckpts/irCSN_152_ig65m_from_scratch_f125286141.pth')
         self.clip_model = CLIP()
         self.model_name = "bert-base-cased" 
         self.model = AutoModel.from_pretrained(self.model_name)
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-        state = torch.load('/home/dimas/git/NEBULA2/nebula_api/mdmmt_api/mdmmt_model/mdmmt_3mod.pth', map_location='cpu')
+        state = torch.load(user_paths+'/mdmmt_api/mdmmt_model/mdmmt_3mod.pth', map_location='cpu')
         self.experts_info = {
             'VIDEO': dict(dim=2048, idx=1, max_tok=30),
             'CLIP': dict(dim=512, idx=2, max_tok=30),
