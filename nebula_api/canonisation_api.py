@@ -24,14 +24,20 @@ class CANON_API:
         concept_presesnt = WordNetLemmatizer().lemmatize(concept,'n')
         lem = wordnet.lemmas(concept_presesnt, pos='n')
         all_concepts = []
-        related_forms = [lem[i].synset() for i in range(len(lem))]
-        for related_form in related_forms:
-            all_concepts.append(related_form.lemmas()[0].name())
-            # for rel in related_form.hypernyms():
-            #     all_relations.append(rel.lemmas()[0].name())
-            for rel in related_form.hyponyms():
-                all_concepts.append(rel.lemmas()[0].name())
-        all_concepts = list(dict.fromkeys(all_concepts)) 
+        if len(concept) > 2:
+            related_forms = [lem[i].synset() for i in range(len(lem))]
+            for related_form in related_forms:
+                all_concepts.append(related_form.lemmas()[0].name())
+                # hypernyms = related_form.hypernyms()
+                # if len(hypernyms) < 1:
+                for rel in related_form.hypernyms():
+                    all_concepts.append(rel.lemmas()[0].name())
+                for rel in related_form.hyponyms():
+                    all_concepts.append(rel.lemmas()[0].name())
+                # else:
+                #     for rel in hypernyms:
+                #         all_concepts.append(rel.lemmas()[0].name())
+            all_concepts = list(dict.fromkeys(all_concepts)) 
         return(all_concepts)
 
     def get_verb_from_concept(self, concept):

@@ -239,7 +239,7 @@ class Comet:
         else:
             for expert in self.experts:
                 personx = personx + " and " + expert
-        print(personx)
+        #print(personx)
         groundings_map = {}
         for lighthouse in lighthouses:
             groundings = []
@@ -258,6 +258,7 @@ class Comet:
                 #print(rel)
                 results = self.generate(queries, decode_method="beam", num_generate = num_generate)
                 for result in results:
+                    #print(result)
                     for grounding in result:
                         if type == 'triplet':
                             if rel == 'xNeed':
@@ -266,8 +267,6 @@ class Comet:
                                 grounding = personx + " intent" + grounding
                             elif rel == 'xWant':
                                 grounding = personx + " want" + grounding
-                            
-                        #if type == 'triplet':
                             if not self.check_triplet(grounding):
                                continue 
                             grounding = grounding.replace("personx","PersonX")
@@ -326,7 +325,8 @@ if __name__ == "__main__":
     # res = comet.get_groundings(events, places, 'triplet')
     # print("Triplets")
     # print(res)
-    print(comet.get_concepts(events, places))
+    for i in comet.get_concepts(events, places).values():
+        print(i)
    
     
       
