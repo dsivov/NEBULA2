@@ -273,14 +273,14 @@ class Comet:
                             grounding = grounding.replace("Person x","PersonX")
                             grounding = grounding.replace("Person X","PersonX")
                             #grounding = grounding.replace("to","PersonX")
-                            grounding = grounding.replace("person x","PersonX")
-                            grounding = grounding.replace("they","PersonXY")
+                            grounding = grounding.replace("person x","PersonX")    
                             #print(grounding.split()[0])
                             if len(grounding.split()) > 1:
                                 if grounding.split()[0] == "to":
                                     grounding = grounding.replace("to","PersonX", 1)
                                 elif grounding.split()[0] != "PersonX":
                                     grounding = " PersonX" + grounding
+                                    grounding = grounding.replace("they","PersonXY")
 
                         groundings.append(grounding)
                         groundings = list(dict.fromkeys(groundings))
@@ -322,11 +322,11 @@ if __name__ == "__main__":
     # res = comet.get_groundings(events, places, 'person','PersonX')
     # print("Persons, grounded by \"PersonX\"")
     # print(res)
-    # res = comet.get_groundings(events, places, 'triplet')
-    # print("Triplets")
-    # print(res)
-    for i in comet.get_concepts(events, places).values():
-        print(i)
+    res = comet.get_groundings(events, places, 'triplet')
+    print("Triplets")
+    print(res)
+    # for i in comet.get_concepts(events, places).values():
+    #     print(i)
    
     
       
