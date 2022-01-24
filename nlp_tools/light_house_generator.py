@@ -73,7 +73,7 @@ class LightHouseGenerator:
         return concepts, attributes, persons, triplets, verbs
 
     def generate_from_concepts(self, concepts: list, attributes: list, persons: list, triplets: list, verbs: list,
-                               places: list, emb):
+                               places: list, emb, mode='generate_amrs'):
         """
         Given concepts, attributes, and persons, generate a variety of sentences and ccompare them with CLIP embedding
         :param conceptsf:
@@ -106,44 +106,52 @@ class LightHouseGenerator:
         #                 best_res = res
         #                 best_sent = sent
 
-        # gen = AMRGenerator()
-        # for c1 in self.default_subjects:
-        #     for c2 in concepts:
-        #         for v in verbs:
-        #             for p in places:
-        #                 gen.add_obj(c2)
-        #                 gen.add_subj(c1)
-        #                 gen.add_loc(p)
-        #                 gen.add_verb(v)
-        #
-        #                 graph = gen.build_graph()
-        #                 sent, _ = self.gtos.generate(graph)
-        #                 sent_emb = self.clip_bench.encode_text(sent)
-        #                 sent_emb = sent_emb / np.linalg.norm(sent_emb)
-        #                 res = np.sum((emb * sent_emb))
-        #
-        #                 if res > best_res:
-        #                     best_res = res
-        #                     best_sent = sent
+        if mode == 'generate_amrs':
+            res_grpahs = []
+            gen = AMRGenerator()
+            for c1 in concepts:
+                for c2 in concepts:
+                    for v in verbs:
+                        for p in places:
+                            for a1 in attributes:
+                                for a2 in attributes:
+                                    gen.add_obj(c2, atr_list=[a1])
+                                    gen.add_subj(c1, atr_list=[a2])
+                                    gen.add_loc(p)
+                                    gen.add_verb(v)
 
-        for c1 in self.default_subjects:
-            for c2 in concepts:
-                for v in verbs:
-                    for p in places:
-                        for a1 in attributes:
-                            for a2 in attributes:
-                                sent = a1 + ' ' + c1 + ' ' + v + ' ' + a2 + ' ' + c2 + ' ' + p
-                                if len(sent) > 320:
-                                    sent = sent[0:320]
-                                sent_emb = self.clip_bench.encode_text(sent)
-                                sent_emb = sent_emb / np.linalg.norm(sent_emb)
-                                res = np.sum((emb * sent_emb))
+                                    graph = gen.build_graph()
+                                    res_grpahs.append(graph)
+                            # sent, _ = self.gtos.generate(graph)
+                            # sent_emb = self.clip_bench.encode_text(sent)
+                            # sent_emb = sent_emb / np.linalg.norm(sent_emb)
+                            # res = np.sum((emb * sent_emb))
+                            #
+                            # if res > best_res:
+                            #     best_res = res
+                            #     best_sent = sent
 
-                                if res > best_res:
-                                    best_res = res
-                                    best_sent = sent
+            return res_grpahs
 
-        return best_sent, best_res
+        elif mode == 'generate_and_test':
+            for c1 in self.default_subjects:
+                for c2 in concepts:
+                    for v in verbs:
+                        for p in places:
+                            for a1 in attributes:
+                                for a2 in attributes:
+                                    sent = a1 + ' ' + c1 + ' ' + v + ' ' + a2 + ' ' + c2 + ' ' + p
+                                    if len(sent) > 320:
+                                        sent = sent[0:320]
+                                    sent_emb = self.clip_bench.encode_text(sent)
+                                    sent_emb = sent_emb / np.linalg.norm(sent_emb)
+                                    res = np.sum((emb * sent_emb))
+
+                                    if res > best_res:
+                                        best_res = res
+                                        best_sent = sent
+
+            return best_sent, best_res
 
 if __name__ == '__main__':
     print('Start generatiion')
