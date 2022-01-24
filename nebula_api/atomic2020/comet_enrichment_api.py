@@ -162,6 +162,25 @@ class Comet:
                         places.append(place[1])
         return(events, places)
 
+    def get_concepts(self, events, places):
+        concepts = self.get_groundings(events, places, type='concepts')
+        all_concepts = []
+        concepts_map = {}
+        for concept in concepts.values():
+            for cn in concept:
+                #print("Concepts: " + cn)
+                for w in cn.split():
+                    all_concepts = all_concepts + self.canon.get_concept_from_entity(w)
+        all_concepts = list(dict.fromkeys(all_concepts)) 
+        for ac in all_concepts:
+            #print(ac)
+            class_ = self.canon.get_class_of_entity(ac)
+            if class_ in concepts_map.keys():
+                concepts_map[class_] = concepts_map[class_] + [ac]
+            else:
+                concepts_map[class_] = [ac]
+        return(concepts_map)
+
     def get_verbs(self, lighthouses):
         relations = self.person_relations
         num_generate = 5
@@ -189,7 +208,7 @@ class Comet:
     def get_groundings(self, events, places=None, type='concepts', person='person'):
         if type == 'concepts':
             relations = self.comcepts_relations
-            num_generate = 100
+            num_generate = 10
         elif type == 'attributes':
             relations = self.attributes_relations
             num_generate = 10
@@ -220,7 +239,7 @@ class Comet:
         else:
             for expert in self.experts:
                 personx = personx + " and " + expert
-        print(personx)
+        #print(personx)
         groundings_map = {}
         for lighthouse in lighthouses:
             groundings = []
@@ -231,7 +250,7 @@ class Comet:
            
             if count < 1:
                 lighthouse = " PersonX " + lighthouse
-            print(lighthouse)
+            #print(lighthouse)
             for rel in relations:
                 queries = []  
                 query = "{} {} [GEN]" .format(lighthouse, rel)
@@ -239,6 +258,7 @@ class Comet:
                 #print(rel)
                 results = self.generate(queries, decode_method="beam", num_generate = num_generate)
                 for result in results:
+                    #print(result)
                     for grounding in result:
                         if type == 'triplet':
                             if rel == 'xNeed':
@@ -247,22 +267,20 @@ class Comet:
                                 grounding = personx + " intent" + grounding
                             elif rel == 'xWant':
                                 grounding = personx + " want" + grounding
-                            
-                        #if type == 'triplet':
                             if not self.check_triplet(grounding):
                                continue 
                             grounding = grounding.replace("personx","PersonX")
                             grounding = grounding.replace("Person x","PersonX")
                             grounding = grounding.replace("Person X","PersonX")
                             #grounding = grounding.replace("to","PersonX")
-                            grounding = grounding.replace("person x","PersonX")
-                            grounding = grounding.replace("they","PersonXY")
+                            grounding = grounding.replace("person x","PersonX")    
                             #print(grounding.split()[0])
                             if len(grounding.split()) > 1:
                                 if grounding.split()[0] == "to":
                                     grounding = grounding.replace("to","PersonX", 1)
                                 elif grounding.split()[0] != "PersonX":
                                     grounding = " PersonX" + grounding
+                                    grounding = grounding.replace("they","PersonXY")
 
                         groundings.append(grounding)
                         groundings = list(dict.fromkeys(groundings))
@@ -304,10 +322,11 @@ if __name__ == "__main__":
     # res = comet.get_groundings(events, places, 'person','PersonX')
     # print("Persons, grounded by \"PersonX\"")
     # print(res)
-    # res = comet.get_groundings(events, places, 'triplet')
-    # print("Triplets")
-    # print(res)
-    print(comet.get_verbs(events))
+    res = comet.get_groundings(events, places, 'triplet')
+    print("Triplets")
+    print(res)
+    # for i in comet.get_concepts(events, places).values():
+    #     print(i)
    
     
       
