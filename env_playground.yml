@@ -251,6 +251,7 @@ dependencies:
   - zlib=1.2.11=h7f8727e_4
   - zstd=1.4.9=haebb681_0
   - pip:
+    - notebook
     - anyio==3.4.0
     - argon2-cffi==21.3.0
     - argon2-cffi-bindings==21.2.0
