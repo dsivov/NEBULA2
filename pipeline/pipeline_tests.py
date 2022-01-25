@@ -8,6 +8,7 @@ import experts.tracker.autotracker as at
 import os
 import shutil
 import pickle
+from gensim.models import KeyedVectors
 
 from nebula_api.milvus_api import connect_db
 
@@ -470,12 +471,30 @@ def save_lighthouse_components():
             actions = [ac[1][0] for ac in light_house[k]['actions']]
             places = [pl[1] for pl in light_house[k]['places']]
             # Find the relevant lighthouses in the database
-            concepts, attributes, persons, triplets = lh_gen.decompose_lighthouse(events=events, actions=actions,
+            concepts, attributes, persons, triplets, verbs = lh_gen.decompose_lighthouse(events=events, actions=actions,
                                                                                   places=places)
             # Save the data to save time
             save_name = f'/home/migakol/data/amr_tests/' + movie_name.split('/')[-1][0:-4] + f'_emb_{k:03d}.pkl'
             f = open(save_name, 'wb')
-            pickle.dump([concepts, attributes, persons, triplets], f)
+            pickle.dump([concepts, attributes, persons, triplets, verbs], f)
+
+
+def format_lighthouses(glove_model, concepts, attributes, persons, triplets):
+    new_concepts = []
+    new_attributes = []
+    new_persons = []
+    new_triplets = []
+    for k in concepts.keys():
+        new_concepts = new_concepts + concepts[k]
+    for k in attributes.keys():
+        new_attributes = new_attributes + attributes[k]
+    for k in persons.keys():
+        new_persons = new_persons + persons[k]
+    for k in triplets.keys():
+        new_triplets = new_triplets + triplets[k]
+
+    return list(set(new_concepts)), list(set(new_attributes)), list(set(new_persons)), list(set(new_triplets))
+
 
 
 def generate_sentences_from_lighthouse():
@@ -483,6 +502,12 @@ def generate_sentences_from_lighthouse():
     clip_bench = NebulaVideoEvaluation()
     thresholds = [0.8]
     base_folder = '/dataset/lsmdc/avi/'
+
+    glove_filename = '/home/migakol/data/glove/glove.6B.100d.txt'
+    word2vec_output_file = glove_filename + '.word2vec'
+    glove_model = KeyedVectors.load_word2vec_format(word2vec_output_file, binary=False)
+    # from gensim.scripts.glove2word2vec import glove2word2vec
+    # glove2word2vec(glove_filename, word2vec_output_file)
 
     # db_nebula_dev = connect_db('nebula_development')
     # query = 'FOR doc IN nebula_vcomet_lighthouse RETURN doc'
@@ -499,7 +524,7 @@ def generate_sentences_from_lighthouse():
         movie_name = base_folder + movie['path']
         print(movie['path'])
 
-        # if movie['path'] != '1005_Signs/1005_Signs_00.10.56.732-00.11.00.017.avi':
+        # if movie['path'] != '1015_27_Dresses/1015_27_Dresses_00.38.02.757-00.38.08.213.avi':
         #     continue
 
         light_house = get_lighthouse_for_movie(movie_name)
@@ -509,17 +534,43 @@ def generate_sentences_from_lighthouse():
         # Go over all embeddings
         for k in range(embedding_list[0].shape[0]):
             emb = embedding_list[0][k, :]
+            emb = emb / np.linalg.norm(emb)
+
+            events = [ev[1][0] for ev in light_house[k]['events']]
+            actions = [ac[1][0] for ac in light_house[k]['actions']]
+            places = [pl[1] for pl in light_house[k]['places']]
+
+            # Compute the best lighthouse event
+            best_res = 0
+            best_sent = ''
+            for event in events:
+                sent_emb = clip_bench.encode_text(event)
+                sent_emb = sent_emb / np.linalg.norm(sent_emb)
+                res = np.sum((emb * sent_emb))
+
+                if res > best_res:
+                    best_res = res
+                    best_sent = event
+
+            print('Best lighthouse sent ', best_sent)
+            print('Best lighthouse res ', best_res)
 
             # Slightly change the lighthouse format
             if k >= len(light_house):
                 continue
-            events = [ev[1][0] for ev in light_house[k]['events']]
-            actions = [ac[1][0] for ac in light_house[k]['actions']]
-            places = [pl[1] for pl in light_house[k]['places']]
             # Load the saved data
             load_name = f'/home/migakol/data/amr_tests/' + movie_name.split('/')[-1][0:-4] + f'_emb_{k:03d}.pkl'
             f = open(load_name, 'rb')
-            concepts, attributes, persons = pickle.load(f)
+            concepts, attributes, persons, triplets, verbs = pickle.load(f)
+            concepts, attributes, persons, triplets = format_lighthouses(glove_model, concepts, attributes, persons,
+                                                                         triplets)
+            best_sent, best_res = lh_gen.generate_from_concepts(concepts, attributes, persons, triplets, verbs,
+                                                                places, emb)
+
+            save_name = f'/home/migakol/data/amr_tests/res' + movie_name.split('/')[-1][0:-4] + f'_emb_{k:03d}.pkl'
+            f = open(save_name, 'wb')
+            pickle.dump([best_sent, best_res], f)
+
             pass
 
 if __name__ == '__main__':
@@ -547,6 +598,6 @@ if __name__ == '__main__':
     # Lighthouse fusion
     # part 1 - generate concepts, attributes, and persons to speed up the subsequent lighthouse computations
     # It is done, by decomposing the lighthouse into components
-    save_lighthouse_components()
+    # save_lighthouse_components()
     # part 2 - load the concepts and use them to generate permutations and compare them against CLIP
-    # generate_sentences_from_lighthouse()
+    generate_sentences_from_lighthouse()

@@ -20,6 +20,26 @@ class CANON_API:
         else:
             return(1)
 
+    def get_concept_from_entity(self, concept):
+        concept_presesnt = WordNetLemmatizer().lemmatize(concept,'n')
+        lem = wordnet.lemmas(concept_presesnt, pos='n')
+        all_concepts = []
+        if len(concept) > 2:
+            related_forms = [lem[i].synset() for i in range(len(lem))]
+            for related_form in related_forms:
+                all_concepts.append(related_form.lemmas()[0].name())
+                # hypernyms = related_form.hypernyms()
+                # if len(hypernyms) < 1:
+                for rel in related_form.hypernyms():
+                    all_concepts.append(rel.lemmas()[0].name())
+                for rel in related_form.hyponyms():
+                    all_concepts.append(rel.lemmas()[0].name())
+                # else:
+                #     for rel in hypernyms:
+                #         all_concepts.append(rel.lemmas()[0].name())
+            all_concepts = list(dict.fromkeys(all_concepts)) 
+        return(all_concepts)
+
     def get_verb_from_concept(self, concept):
         concept_presesnt = WordNetLemmatizer().lemmatize(concept,'v')
         lem = wordnet.lemmas(concept_presesnt, pos='v')
@@ -43,7 +63,10 @@ class CANON_API:
             root = syn.root_hypernyms()[0].name()
             if syn.name() == root:
                 return("attribute")
-            abstract = syn.hypernyms()[0]
+            if len(syn.hypernyms()) >= 1:
+                abstract = syn.hypernyms()[0]
+            else:
+                return('unknown')
             while abstract.name() != root:
                 #print(syn.name())
                 if syn.name() == 'artifact.n.01':
@@ -106,7 +129,7 @@ def main():
        
         
         concept = input("Concept> ")
-        print(ascore.get_verb_from_concept(concept))
+        print(ascore.get_concept_from_entity(concept))
 
 if __name__ == '__main__':
     main()
