@@ -26,6 +26,8 @@ class Comet:
         self.model = AutoModelForSeq2SeqLM.from_pretrained(model_path).to(self.device)
         self.model.zero_grad()
         self.nre = NRE_API()
+        self.db = self.nre.db
+        self.comet_collection = self.db.collection("nebula_comet2020_concepts_lsmdc")
         self.canon = CANON_API()
         # self.stog = amrlib.load_stog_model()
         # self.gtos = amrlib.load_gtos_model()
@@ -150,7 +152,7 @@ class Comet:
         lighthouses = self.nre.get_vcomet_data(movie_id)
         for lh in lighthouses:
             if lh['scene_element'] == scene_element:
-                print(lh['scene_element'])
+                print("Movie: " + movie_id + " stage " + str(lh['scene_element']))
                 for event in lh['events']:
                     if event[0] >= 0.3:
                         events.append(event[1][0])
@@ -161,6 +163,14 @@ class Comet:
                     if place[0] >= 0.3:
                         places.append(place[1])
         return(events, places)
+    
+    def get_stages(self, m):
+        query_r = 'FOR doc IN StoryLine FILTER doc.arango_id == "{}" RETURN doc'.format(m)
+        cursor_r = self.db.aql.execute(query_r)
+        stages = []
+        for stage in cursor_r:
+            stages.append(stage)
+        return(stages)
 
     def get_concepts(self, events, places):
         concepts = self.get_groundings(events, places, type='concepts')
@@ -203,21 +213,21 @@ class Comet:
                             for relation in relations:
                                 all_posible_verbs.append(relation)
         all_posible_verbs = list(dict.fromkeys(all_posible_verbs))
-        return(all_posible_verbs)
+        return({'verbs': all_posible_verbs})
             
     def get_groundings(self, events, places=None, type='concepts', person='person'):
         if type == 'concepts':
             relations = self.comcepts_relations
-            num_generate = 10
+            num_generate = 5
         elif type == 'attributes':
             relations = self.attributes_relations
-            num_generate = 10
+            num_generate = 5
         elif type == 'triplet':
             relations = self.triplet_relations
-            num_generate = 20
+            num_generate = 10
         elif type == 'person':
             relations = self.person_relations
-            num_generate = 10
+            num_generate = 1
         else:
             print("Bad relation type: " + type)
         pplaces = []
@@ -290,6 +300,38 @@ class Comet:
         #groundings = list(dict.fromkeys(groundings))
         return(groundings_map)
         
+    def get_playground_movies(self):
+        return(['Movies/114206816', 'Movies/114206849', 'Movies/114206892', 'Movies/114206952', 'Movies/114206999', 'Movies/114207139', 'Movies/114207205', 'Movies/114207240', 'Movies/114207265', 'Movies/114207324', 'Movies/114207361', 'Movies/114207398', 'Movies/114207441', 'Movies/114207474', 'Movies/114207499', 'Movies/114207550', 'Movies/114207668', 'Movies/114207740', 'Movies/114207781', 'Movies/114207810', 'Movies/114207839', 'Movies/114207908', 'Movies/114207953', 'Movies/114207984', 'Movies/114208064', 'Movies/114208149', 'Movies/114208196', 'Movies/114208338', 'Movies/114208367', 'Movies/114208576', 'Movies/114208637', 'Movies/114208744', 'Movies/114208777', 'Movies/114208820', 'Movies/114206358', 'Movies/114206264', 'Movies/114206337', 'Movies/114206397', 'Movies/114206632', 'Movies/114206597', 'Movies/114206691', 'Movies/114206789', 'Movies/114207184', 'Movies/114206548'])
+        
+    def save_concepts_todb(self, concepts):
+        self.comet_collection.insert(concepts)
+
+    def insert_grounding_to_db(self):
+        movies = self.get_playground_movies()
+        for movie_id in movies:
+            for i, stage in enumerate(comet.get_stages(movie_id)):
+                events, places = self.get_playground_data(movie_id, i)
+                results = {}
+                results['movie_id'] = movie_id
+                results['stage'] = i
+                res_attr = self.get_groundings(events, places, 'attributes')
+                res_persons = self.get_groundings(events, places, 'person','PersonX')
+                res_concepts = self.get_concepts(events, places)
+                res_verbs = self.get_verbs(events+places)
+                res_triplets = self.get_groundings(events, places, 'triplet')
+                #results =  dict(res_attr.items() + res_persons.items() + res_concepts.items() + res_verbs.items() + res_triplets.items())
+                results.update(res_attr)
+                results.update(res_persons)
+                results.update(res_concepts)
+                results.update(res_verbs)
+                results.update(res_triplets)
+                self.save_concepts_todb(results)    
+                results.clear()
+                res_attr.clear()
+                res_persons.clear()
+                res_concepts.clear()
+                res_verbs.clear()
+                res_triplets.clear()
 
 if __name__ == "__main__":
     print("model loading ...")
@@ -303,28 +345,14 @@ if __name__ == "__main__":
     # '1 quickly escorts someone down the lobby','the group move through the elevator']
     # places = ['in a gatehouse of an airport','at an airport entrance','on the sstreet','outside the staff entrance']
     #movie_id = 'Movies/114206548'
-    movie_id = 'Movies/114206999'
+    #movie_id = 'Movies/114206999'
     comet = Comet("./comet-atomic_2020_BART")
-    #Get data for movie, scene_element
-    events, places = comet.get_playground_data(movie_id, 0)
+    res = comet.nre.get_groundings_from_db('Movies/114206892', 0)
     
-    # print("Original lighthouse---------------")
-    # print(events)
-    # print("Places")
-    # print(places)
-    # # comet.add_experts(["passport"])
-    # res = comet.get_groundings(events, places, 'concepts')
-    # print("Concepts.....")
-    # print(res)
-    # res = comet.get_groundings(events, places, 'attributes')
-    # print("Attributes...")
-    # print(res)
-    # res = comet.get_groundings(events, places, 'person','PersonX')
-    # print("Persons, grounded by \"PersonX\"")
-    # print(res)
-    res = comet.get_groundings(events, places, 'triplet')
-    print("Triplets")
     print(res)
+    #Get data for movie, scene_element
+    
+    #print(results)
     # for i in comet.get_concepts(events, places).values():
     #     print(i)
    
