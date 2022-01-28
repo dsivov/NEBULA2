@@ -145,7 +145,7 @@ class NebulaVideoEvaluation:
                 with torch.no_grad():
                     img = self.preprocess(Image.fromarray(frame)).unsqueeze(0).to(self.device)
                     embeddings = self.model.encode_image(img)
-                    embeddings = embeddings / np.linalg.norm(embeddings)
+                    # embeddings = embeddings / np.linalg.norm(embeddings)
                     embedding_array = np.append(embedding_array, embeddings, axis=0)
                     if init == 0:
                         init = 1

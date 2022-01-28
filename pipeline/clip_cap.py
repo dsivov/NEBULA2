@@ -5,6 +5,9 @@ from typing import Tuple, List, Union, Optional
 import numpy as np
 import torch
 import torch.nn.functional as nnf
+from PIL import Image
+import clip
+import cv2 as cv
 
 N = type(None)
 V = np.array
@@ -203,10 +206,14 @@ class ClipCaptionPrefix(ClipCaptionModel):
 
 
 class ClipCap:
-    def __init__(self):
+    def __init__(self, is_coco=True):
         self.tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
         self.prefix_length = 10
-        self.model_path = '/home/migakol/data/clip_cap/conceptual_weights.pt'
+        if is_coco:
+            self.model_path = '/home/migakol/data/clip_cap/coco_weights.pt'
+        else:
+            self.model_path = '/home/migakol/data/clip_cap/conceptual_weights.pt'
+
         self.model = ClipCaptionModel(self.prefix_length)
 
         self.model.load_state_dict(torch.load(self.model_path, map_location=CPU))
@@ -223,3 +230,15 @@ class ClipCap:
                                                                                                -1)
         generated_text_prefix = generate2(self.model, self.tokenizer, embed=prefix_embed)
         return generated_text_prefix
+
+
+if __name__ == '__main__':
+    img_name = '/home/migakol/data/rrr.png'
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model, preprocess = clip.load("ViT-B/32", device=device)
+    frame = cv.imread(img_name)
+    img = preprocess(Image.fromarray(frame)).unsqueeze(0).to(device)
+    embedding = model.encode_image(img)
+
+    clip_cap = ClipCap()
+    clip_cap.generate_text(embedding)
