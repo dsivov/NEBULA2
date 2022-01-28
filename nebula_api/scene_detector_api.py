@@ -486,11 +486,6 @@ class NEBULA_SCENE_DETECTOR():
         
         return merged_dbs
 
-
-
-        
-
-
     def parse_comet_to_lsmdc(self, comet_dir, lsmdc_dir):
 
         ### VISUAL COMET ###
@@ -533,7 +528,27 @@ class NEBULA_SCENE_DETECTOR():
         parsed_val_path = self.merge_comet_in_lsmdc(lsmdc_datasets, comet_val_dict)
         parsed_test_path = self.merge_comet_in_lsmdc(lsmdc_datasets, comet_test_dict)
         
+def divide_movie_by_timestamp(movie_in_path, t_start, t_end, dim=(224, 224)):
 
+    cap = cv2.VideoCapture(movie_in_path)
+    ret, frame = cap.read()
+    num = 0
+    frames = []
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
+    movie_frames_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    frame_start = t_start * fps
+    frame_end = t_end * fps
+    if frame_start > movie_frames_count or frame_end > movie_frames_count:
+        print(f'Error, the provided t_start {t_start} or t_end {t_end} \
+            multiplied by fps {fps} is higher than number of frames {movie_frames_count}')
+        return -1
+    while cap.isOpened() and ret:
+        num = num + 1
+        ret, frame = cap.read()
+        if frame is not None and num >= frame_start and num <= frame_end:
+            resized_frame = cv2.resize(frame, dim, interpolation = cv2.INTER_AREA)
+            frames.append(resized_frame)
+    return frames
 
 
 
@@ -542,8 +557,12 @@ class NEBULA_SCENE_DETECTOR():
 
 def main():
     scene_detector = NEBULA_SCENE_DETECTOR()
-    scene_detector.parse_comet_to_lsmdc("/dataset1/visualcomet/", "/dataset1/")
+    # scene_detector.parse_comet_to_lsmdc("/dataset1/visualcomet/", "/dataset1/")
     # scene_detector.merge_movies("/dataset1/", "/dataset1/storage/")
+    path = '/dataset/development/1010_TITANIC_00_41_32_072-00_41_40_196.mp4'
+    path_frames = '/home/ilan/development/frames/'
+    divide_movie_by_timestamp(path, 3, 4)
+
     # scene_detector.new_movies_batch_processing()
 
     #scene_detector.init_new_db("nebula_datadriven")

@@ -4,7 +4,7 @@ The class is used to generate new lighthouse sentences from existing ones
 import amrlib
 import penman
 from nebula_api.atomic2020.comet_enrichment_api import Comet
-from benchmark.clip_benchmark import NebulaVideoEvaluation
+# from benchmark.clip_benchmark import NebulaVideoEvaluation
 import numpy as np
 
 class AMRGenerator:
@@ -46,14 +46,27 @@ class AMRGenerator:
 
 
 class LightHouseGenerator:
-    def __init__(self):
-        self.comet = Comet("/home/migakol/data/comet/comet-atomic_2020_BART")
+    def __init__(self, comet: Comet = None, stog = None, gtos = None):
+        if comet == None:
+            # self.comet = Comet("/home/migakol/data/comet/comet-atomic_2020_BART")
+            self.comet = Comet("/home/gil/dev/NEBULA2/nebula_api/atomic2020/comet-atomic_2020_BART")
+        else:
+            self.comet = comet
         # The default subjects are the most widespread subjects and we check them regardless of other concepts
         self.default_subjects = ['man', 'woman', 'boy', 'girl', 'guy', 'crowd', 'people']
 
-        self.stog = amrlib.load_stog_model(model_dir='/home/migakol/data/amrlib/model_stog')
-        self.gtos = amrlib.load_gtos_model(model_dir='/home/migakol/data/amrlib/model_gtos')
-        self.clip_bench = NebulaVideoEvaluation()
+        if stog == None:
+            self.stog = amrlib.load_stog_model()
+            # self.stog = amrlib.load_stog_model(model_dir='/home/migakol/data/amrlib/model_stog')
+        else:
+            self.stog = stog
+        if gtos == None:
+            # self.gtos = amrlib.load_gtos_model(model_dir='/home/migakol/data/amrlib/model_gtos')
+            self.gtos = amrlib.load_gtos_model()
+        else:
+            self.gtos = gtos
+
+        # self.clip_bench = NebulaVideoEvaluation()
 
 
     def decompose_lighthouse(self, events: list, actions: list, places: list):

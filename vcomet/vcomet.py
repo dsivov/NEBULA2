@@ -215,7 +215,7 @@ class VCOMET_KG:
                 """
 
     def insert_playgound_embeddings(self):
-        vc_collection = self.db.collection("nebula_vcomet_lighthouse_lsmdc")
+        vc_collection = self.db.collection("nebula_vcomet_lighthouse_lsmdc_mean")
         movies = self.get_playground_movies()
         for movie in movies:
             stage_data, url_link = self.get_places_and_events_for_scene(movie)
@@ -223,6 +223,61 @@ class VCOMET_KG:
                 s['movie'] = movie
                 s['url_link'] = url_link
                 vc_collection.insert(s)
+    
+    def print_movie_by_id(self,
+       movie_id,
+       num_of_items = 1,
+       db_orig = 'nebula_vcomet_lighthouse_lsmdc',
+       db_max = 'nebula_vcomet_lighthouse_lsmdc_max',
+       db_mean = 'nebula_vcomet_lighthouse_lsmdc_mean'
+       ):
+
+        # vc_collection = self.db.collection("nebula_vcomet_lighthouse_lsmdc_mean")
+        query_orig = f'FOR doc IN {db_orig} RETURN doc'
+        query_max = f'FOR doc IN {db_max} RETURN doc'
+        query_mean = f'FOR doc IN {db_mean} RETURN doc'
+        quries = [query_orig, query_max, query_mean]
+        quries_names = [db_orig, db_max, db_mean]
+        num_of_scenes = -1
+        cursor = self.db.aql.execute(query_orig)
+        for data in cursor:
+                if data['movie'] == movie_id:
+                    num_of_scenes += 1
+        if num_of_scenes == -1:
+            print(f"ERROR: {movie_id} not found!")
+            return
+        
+        for cur_scene in range(num_of_scenes + 1):
+            for idx, query in enumerate(quries):
+                cursor = self.db.aql.execute(query)
+                found = False
+                for data in cursor:
+                    
+                    if data['movie'] == movie_id and data["scene_element"] == cur_scene:
+                        print('########################################')
+                        print(f"Current document: {quries_names[idx]}")
+                        print(f'Movie: {data["movie"]}')
+                        print(f'Movie URL: {data["url_link"]}')
+                        print(f'Scene element: {data["scene_element"]}')
+        
+                        print("Movie events: ")
+                        for row in range(num_of_items - 1):
+                            if row < len(data["events"]):
+                                print(data["events"][row])
+                        
+                        print("Movie places: ")
+                        for row in range(num_of_items):
+                            if row < len(data["places"]):
+                                print(data["places"][row])
+
+                        print("Movie actions: ")
+                        for row in range(num_of_items):
+                            if row < len(data["actions"]):
+                                print(data["actions"][row]) 
+                    
+
+        
+
 
     def get_playgound_embeddings(self):
         movies = self.get_playground_movies()
@@ -297,8 +352,13 @@ def main():
 
     #bad = [movie = "Movies/114206816", 114207361 - wierd,]
     kg = VCOMET_KG()
-    kg.get_playgound_embeddings()
-    a=0
+    # kg.get_playgound_embeddings()
+    # kg.insert_playgound_embeddings()
+    # a=0
+    kg.print_movie_by_id(
+       movie_id = 'Movies/114206816',
+       num_of_items = 3
+    )
     # test_clips = ['1040_The_Ugly_Truth_00.51.36.680-00.51.38.232', '1031_Quantum_of_Solace_00.52.35.159-00.52.37.144', '1008_Spider-Man2_00.37.21.781-00.37.25.010', '1031_Quantum_of_Solace_00.39.09.510-00.39.14.286', '1006_Slumdog_Millionaire_01.50.17.425-01.50.20.715', '1052_Harry_Potter_and_the_order_of_phoenix_00.14.58.068-00.15.00.314', '0028_The_Crying_Game_00.53.53.876-00.53.55.522', '0004_Charade_00.08.11.578-00.08.11.963', '1009_Spider-Man3_00.42.59.783-00.43.01.608', '0033_Amadeus_00.16.03.665-00.16.08.486', '1038_The_Great_Gatsby_00.57.29.452-00.57.31.831', '0017_Pianist_00.34.12.556-00.34.15.845', '1049_Harry_Potter_and_the_chamber_of_secrets_00.19.45.874-00.19.49.051', '0021_Rear_Window_00.27.37.810-00.27.39.810', '1038_The_Great_Gatsby_00.56.48.259-00.56.50.126', '1047_Defiance_01.31.42.519-01.31.46.181', '0009_Forrest_Gump_00.43.57.991-00.44.00.160', '1023_Horrible_Bosses_01.24.36.860-01.24.38.899', '1029_Pride_And_Prejudice_Disk_One_02.28.27.683-02.28.31.276', '1055_Marley_and_me_00.03.35.270-00.03.36.189', '0029_The_Graduate_00.04.51.868-00.04.53.081', '0025_THE_LORD_OF_THE_RINGS_THE_RETURN_OF_THE_KING_02.55.46.515-02.55.51.946', '1005_Signs_00.10.56.732-00.11.00.017', '0011_Gandhi_01.05.17.564-01.05.18.429', '0014_Ist_das_Leben_nicht_schoen_01.14.53.158-01.14.53.866', '1035_The_Adjustment_Bureau_00.01.40.825-00.01.46.814', '1024_Identity_Thief_00.01.43.655-00.01.47.807', '1035_The_Adjustment_Bureau_00.16.58.881-00.17.05.736', '1047_Defiance_00.52.07.009-00.52.07.978', '0014_Ist_das_Leben_nicht_schoen_00.01.45.481-00.02.06.641', '1043_Vantage_Point_00.38.48.473-00.38.52.599', '1010_TITANIC_00.41.32.072-00.41.40.196', '1047_Defiance_01.08.28.259-01.08.29.433', '0030_The_Hustler_01.21.48.576-01.21.52.523', '0001_American_Beauty_00.21.38.688-00.21.39.904', '1005_Signs_00.14.35.680-00.14.40.450', '1015_27_Dresses_00.38.02.757-00.38.08.213', '0004_Charade_00.27.44.212-00.27.44.742', '0002_As_Good_As_It_Gets_00.06.32.767-00.06.33.455', '0027_The_Big_Lebowski_01.46.45.804-01.46.49.607', '1034_Super_8_01.42.41.370-01.42.45.709', '0026_The_Big_Fish_00.17.37.555-00.17.42.606', '1052_Harry_Potter_and_the_order_of_phoenix_02.00.04.103-02.00.06.616', '0001_American_Beauty_01.45.48.324-01.46.01.008']
     # for i, test_clip in enumerate(test_clips):
     #     test_clips[i] = '_'.join(test_clips[i].rsplit('.', 6))

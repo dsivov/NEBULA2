@@ -147,12 +147,21 @@ class NRE_API:
 
     def get_vcomet_data(self, movie_id):
         vcomet_data = []
-        query = 'FOR doc IN nebula_vcomet_lighthouse FILTER doc.movie == \'' + movie_id + '\' RETURN doc'
+        query = 'FOR doc IN nebula_vcomet_lighthouse_lsmdc FILTER doc.movie == \'' + movie_id + '\' RETURN doc'
         cursor = self.db.aql.execute(query)
         for node in cursor:
             vcomet_data.append(node)
             # print(node)
         return(vcomet_data)
+    
+    def get_groundings_from_db(self, movie_id, scene_element):
+        results = {}
+        query = 'FOR doc IN nebula_comet2020_concepts_lsmdc FILTER doc.movie_id == "{}" AND doc.stage == {} RETURN doc'.format(movie_id, scene_element)
+        #print(query)
+        cursor = self.db.aql.execute(query)
+        for doc in cursor:
+            results.update(doc)
+        return (results)
 
 #nre = NRE_API()
 #nre.get_vcomet_data("Movies/114206264")
