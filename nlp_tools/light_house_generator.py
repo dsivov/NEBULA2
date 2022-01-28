@@ -65,7 +65,8 @@ class LightHouseGenerator:
         :param emb:
         :return:
         """
-        concepts = self.comet.get_groundings(events, places, 'concepts')
+        concepts = self.comet.get_concepts(events, places)
+        # concepts = self.comet.get_groundings(events, places, 'concepts')
         attributes = self.comet.get_groundings(events, places, 'attributes')
         persons = self.comet.get_groundings(events, places, 'person', 'somebody')
         triplets = self.comet.get_groundings(events, places, 'triplet')

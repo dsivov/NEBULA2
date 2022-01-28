@@ -54,13 +54,17 @@ def choose_best_setence_from_array(embedding_array, sentences):
 
 
 class NebulaVideoEvaluation:
-    def __init__(self):
+    def __init__(self, model_name='RN50x4'):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         # self.model, self.preprocess = clip.load("ViT-B/32", device=self.device)
         # self.model1, self.preprocess1 = clip.load("RN50", device=self.device)
         # self.model2, self.preprocess2 = clip.load("RN101", device=self.device)
-        self.model, self.preprocess = clip.load("RN50x4", device=self.device)
+        # self.model, self.preprocess = clip.load("RN50x4", device=self.device)
+        self.model, self.preprocess = clip.load(model_name, device=self.device)
         self.model_res = 640
+        if model_name == 'ViT-B/32':
+            self.model_res = 512
+        self.ind_array = []
 
 
     def mark_blurred_frames(self, movie_name, start_frame, end_frame, blur_threshold=100):
@@ -119,6 +123,52 @@ class NebulaVideoEvaluation:
         """
         pass
 
+    def get_leg_representaion(self, movie_name, boundary, method='single'):
+        """
+        Get the representaion of a movie leg defined by the boundaries
+        :param movie_name:
+        :param boundary: the first frame and the frame one after the last
+        :param method:
+        :return:
+        """
+        cap = cv.VideoCapture(movie_name)
+        init = 0
+        old_embeddings = None
+        diff_list = []
+        ret, frame = cap.read()
+        frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
+        embedding_array = np.zeros((0, self.model_res))
+        frame_num = 0
+        fps = cap.get(cv.CAP_PROP_FPS)
+        while cap.isOpened() and ret:
+            if (frame_num >= boundary[0]) and (frame_num < boundary[1]):
+                with torch.no_grad():
+                    img = self.preprocess(Image.fromarray(frame)).unsqueeze(0).to(self.device)
+                    embeddings = self.model.encode_image(img)
+                    embeddings = embeddings / np.linalg.norm(embeddings)
+                    embedding_array = np.append(embedding_array, embeddings, axis=0)
+                    if init == 0:
+                        init = 1
+            frame_num = frame_num + 1
+            ret, frame = cap.read()
+            if frame is not None:
+                frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
+
+        blurred = self.mark_blurred_frames(movie_name, boundary[0], boundary[1], blur_threshold=40)
+        good_ind = np.where(blurred[boundary[0]:boundary[1]] == 1)[0] + boundary[0]
+        if method == 'single':
+            right_ind = good_ind[int(len(good_ind) / 2)]
+            self.ind_array.append(right_ind)
+            represent_emb = (embedding_array[right_ind, :]).reshape(1, self.model_res)
+        elif method == 'average':
+            represent_emb = np.mean(embedding_array[good_ind, :], axis=0).reshape(1, self.model_res)
+        elif method == 'average':
+            represent_emb = np.mean(embedding_array[good_ind, :], axis=0).reshape(1, self.model_res)
+        else:
+            represent_emb = embedding_array[0, :]
+
+        return represent_emb
+
     def get_embedding_difs(self, movie_name, start_time, end_time):
 
         cap = cv.VideoCapture(movie_name)
@@ -172,6 +222,7 @@ class NebulaVideoEvaluation:
         embedding_list = []
         if embedding_array.shape[0] == 0:
             return embedding_list, boundaries
+        self.ind_array = []
         for th in thresholds:
             new_bounds, good_frame_len = self.segment_embedding_array(embedding_array, th)
             good_frame_per.append(good_frame_len / (embedding_array.shape[0]))
@@ -188,6 +239,7 @@ class NebulaVideoEvaluation:
                 elif method == 'single':
                     # right_ind = int((bound_tuple[0] + bound_tuple[1] + 1) / 2)
                     right_ind = good_ind[int(len(good_ind) / 2)]
+                    self.ind_array.append(right_ind)
                     represent_emb = (embedding_array[right_ind, :]).reshape(1, self.model_res)
                 else:
                     return None, None

@@ -9,10 +9,11 @@ import os
 import shutil
 import pickle
 from gensim.models import KeyedVectors
+from pipeline.clip_cap import ClipCap
 
 from nebula_api.milvus_api import connect_db
-
 from nebula_api.milvus_api import MilvusAPI
+
 
 class LSMDCSmallDataset:
     def __init__(self, db):
@@ -453,7 +454,7 @@ def save_lighthouse_components():
         movie_name = base_folder + movie['path']
         print(movie['path'])
 
-        # if movie['path'] != '1005_Signs/1005_Signs_00.10.56.732-00.11.00.017.avi':
+        # if movie['path'] != '1015_27_Dresses/1015_27_Dresses_00.38.02.757-00.38.08.213.avi':
         #     continue
 
         light_house = get_lighthouse_for_movie(movie_name)
@@ -479,6 +480,34 @@ def save_lighthouse_components():
             pickle.dump([concepts, attributes, persons, triplets, verbs], f)
 
 
+def cluster_words(glove_model, concepts):
+    """
+    Given a list of concepts, combine them into groups
+    :param glove_model:
+    :param concepts:
+    :return:
+    """
+    concepts = list(set(concepts))
+    updated_concepts = []
+    update_vectors = np.zeros((100, 0))
+    for concept in concepts:
+        if 'Person' in concept or 'person' in concept:
+            continue
+        updated_concepts.append(concept)
+        w_vector = np.zeros((100, 1))
+        w_n = 0
+        for w in concept.split(' '):
+            if w == '':
+                continue
+            w_vector = w_vector + glove_model.get_vector(w).reshape((100, 1))
+            w_n += 1
+        w_vector = w_vector / w_n
+        print(np.linalg.norm(w_vector))
+        w_vector = w_vector / np.linalg.norm(w_vector)
+        update_vectors = np.append(update_vectors, w_vector, axis=1)
+
+    dist_mat = np.matmul(update_vectors.T, update_vectors)
+
 def format_lighthouses(glove_model, concepts, attributes, persons, triplets):
     new_concepts = []
     new_attributes = []
@@ -493,6 +522,9 @@ def format_lighthouses(glove_model, concepts, attributes, persons, triplets):
     for k in triplets.keys():
         new_triplets = new_triplets + triplets[k]
 
+    # Go over all concepts
+    cluster_words(glove_model, new_concepts)
+
     return list(set(new_concepts)), list(set(new_attributes)), list(set(new_persons)), list(set(new_triplets))
 
 
@@ -500,12 +532,15 @@ def format_lighthouses(glove_model, concepts, attributes, persons, triplets):
 def generate_sentences_from_lighthouse():
     all_movies, all_ids = get_small_movies_ids()
     clip_bench = NebulaVideoEvaluation()
+    low_res_clip_bench = NebulaVideoEvaluation('ViT-B/32')
     thresholds = [0.8]
     base_folder = '/dataset/lsmdc/avi/'
 
     glove_filename = '/home/migakol/data/glove/glove.6B.100d.txt'
     word2vec_output_file = glove_filename + '.word2vec'
     glove_model = KeyedVectors.load_word2vec_format(word2vec_output_file, binary=False)
+
+    clip_cap = ClipCap()
     # from gensim.scripts.glove2word2vec import glove2word2vec
     # glove2word2vec(glove_filename, word2vec_output_file)
 
@@ -524,8 +559,8 @@ def generate_sentences_from_lighthouse():
         movie_name = base_folder + movie['path']
         print(movie['path'])
 
-        # if movie['path'] != '1015_27_Dresses/1015_27_Dresses_00.38.02.757-00.38.08.213.avi':
-        #     continue
+        if movie['path'] != '1015_27_Dresses/1015_27_Dresses_00.38.02.757-00.38.08.213.avi':
+            continue
 
         light_house = get_lighthouse_for_movie(movie_name)
 
@@ -534,6 +569,9 @@ def generate_sentences_from_lighthouse():
         # Go over all embeddings
         for k in range(embedding_list[0].shape[0]):
             emb = embedding_list[0][k, :]
+
+            clip_cap_emb = low_res_clip_bench.get_leg_representaion(movie_name, boundaries[0][k], method='single')
+            clip_cap_text = clip_cap.generate_text(clip_cap_emb)
             emb = emb / np.linalg.norm(emb)
 
             events = [ev[1][0] for ev in light_house[k]['events']]
@@ -549,7 +587,6 @@ def generate_sentences_from_lighthouse():
                 res = np.sum((emb * sent_emb))
 
                 if res > best_res:
-                    best_res = res
                     best_sent = event
 
             print('Best lighthouse sent ', best_sent)
@@ -601,3 +638,4 @@ if __name__ == '__main__':
     # save_lighthouse_components()
     # part 2 - load the concepts and use them to generate permutations and compare them against CLIP
     generate_sentences_from_lighthouse()
+
