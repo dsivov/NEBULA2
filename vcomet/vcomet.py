@@ -40,7 +40,7 @@ class VCOMET_KG:
             os.remove('/home/ilan/git/NEBULA2/video_file.mp4')
         query = 'FOR doc IN Movies FILTER doc._id == "{}" RETURN doc'.format(movie)
         cursor = self.db.aql.execute(query)
-        url_prefix = "http://ec2-3-120-189-231.eu-central-1.compute.amazonaws.com:7000/"
+        url_prefix = "http://ec2-18-159-140-240.eu-central-1.compute.amazonaws.com:7000/"
         url_link = ''
         for doc in cursor:
             url_link = url_prefix+doc['url_path']
