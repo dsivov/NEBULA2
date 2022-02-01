@@ -181,6 +181,7 @@ class MDMMT_API():
         embs = []
         timings = []
         t = 0
+        # TODO: Support 32 frames
         frames = scene_detector_api.divide_movie_by_timestamp(path, 3, 4.38, (frame_size, frame_size))
         frames = np.array(frames) # must be 32 frames
         delta = len(frames) / fps
@@ -236,7 +237,7 @@ class MDMMT_API():
             timings_vggish, embs_vggish = None, None
         timings_vmz, embs_vmz = self.visual_compute_embs(vmz_model, path, t_start, t_end,
                                                     fps=28, frames_per_clip=32, frame_crop_size=224, frame_size=224)
-        timings_clip, embs_clip = self.visual_clip_compute_embs(clip_model, path, t_start, t_end,
+        timings_clip, embs_clip = self.visual_compute_embs(clip_model, path, t_start, t_end,
                                                     fps=28, frames_per_clip=1, frame_crop_size=224, frame_size=224)
 
 
@@ -273,11 +274,26 @@ class MDMMT_API():
     def sim(x1, x2):
         return (x1*x2).sum()
 
+def compute_score_with_ffmpeg(mdmmt, vemb, texts, t_start, t_end, path):
+    # tembs = mdmmt.batch_encode_text(texts)
+    # scores = torch.matmul(tembs, vemb)
+    # for txt, score in zip(texts, scores):
+    #     print(score.item(), txt)
+    pass
+
+
+def compute_score_with_opencv(mdmmt, vemb, texts, frame_start, frame_end, path):
+    # tembs = mdmmt.batch_encode_text(texts)
+    # scores = torch.matmul(tembs, vemb)
+    # for txt, score in zip(texts, scores):
+    #     print(score.item(), txt)
+    pass
+
 def main():
     mdmmt = MDMMT_API()
     path = '/dataset/development/1010_TITANIC_00_41_32_072-00_41_40_196.mp4'
     t_start=3
-    t_end=4
+    t_end=4.38
     vemb = mdmmt.encode_video(
         mdmmt.vggish_model, # adio modality
         mdmmt.vmz_model, # video modality
