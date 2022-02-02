@@ -27,7 +27,8 @@ class Comet:
         self.model.zero_grad()
         self.nre = NRE_API()
         self.db = self.nre.db
-        self.comet_collection = self.db.collection("nebula_comet2020_concepts_lsmdc")
+        #self.comet_collection = self.db.collection("nebula_comet2020_concepts_lsmdc")
+        self.comet_collection = self.db.collection("nebula_comet2020_all_candidates_lsmdc_d")
         self.canon = CANON_API()
         # self.stog = amrlib.load_stog_model()
         # self.gtos = amrlib.load_gtos_model()
@@ -54,9 +55,13 @@ class Comet:
             "xNeed" 
         ]
         self.person_relations = [
+            "xReason",
+            "isAfter",
+            "isBefore",
             "xEffect", 
             "xWant",
             "xIntent",
+            "xReact",
             "xNeed"
             ]
         self.attributes_relations = [ 
@@ -66,7 +71,14 @@ class Comet:
             "xAttr"
             ]
         self.comcepts_relations = [ 
-            "isFilledBy"
+            "isFilledBy",
+            "HasA",
+            "IsA",
+            "MadeOf",
+            "MadeUpOf",
+            "PartOf",
+            "xAttr",
+            "InstanceOf"
             ]
         self.experts = []
 
@@ -157,10 +169,10 @@ class Comet:
                     if event[0] >= 0.3:
                         events.append(event[1][0])
                 for action in lh['actions']:
-                    if action[0] >= 0.35:
+                    if action[0] >= 0.30:
                         events.append(action[1][0])
                 for place in lh['places']:
-                    if place[0] >= 0.3:
+                    if place[0] >= 0.25:
                         places.append(place[1])
         return(events, places)
     
@@ -173,23 +185,32 @@ class Comet:
         return(stages)
 
     def get_concepts(self, events, places):
-        concepts = self.get_groundings(events, places, type='concepts')
-        all_concepts = []
-        concepts_map = {}
-        for concept in concepts.values():
-            for cn in concept:
+        concepts = self.get_groundings(events, places, type='concepts')     
+        lh_concepts_map = {}
+        for concept in concepts:
+            #print(concept)
+            all_concepts = []
+            all_relations = []
+            concepts_map = {}
+            for cn in concepts[concept]:
                 #print("Concepts: " + cn)
                 for w in cn.split():
-                    all_concepts = all_concepts + self.canon.get_concept_from_entity(w)
-        all_concepts = list(dict.fromkeys(all_concepts)) 
-        for ac in all_concepts:
-            #print(ac)
-            class_ = self.canon.get_class_of_entity(ac)
-            if class_ in concepts_map.keys():
-                concepts_map[class_] = concepts_map[class_] + [ac]
-            else:
-                concepts_map[class_] = [ac]
-        return(concepts_map)
+                    nouns, verbs = self.canon.get_concept_from_entity(w.lower())
+                    all_concepts = all_concepts + nouns
+                    all_relations = all_relations + verbs 
+            all_concepts = list(dict.fromkeys(all_concepts)) 
+            all_relations = list(dict.fromkeys(all_relations)) 
+            for ac in all_concepts:
+                #print(ac)
+                class_ = self.canon.get_class_of_entity(ac)
+                if class_ != 'none':
+                    if class_ in concepts_map.keys():
+                        concepts_map[class_] = concepts_map[class_] + [ac]
+                    else:
+                        concepts_map[class_] = [ac]
+            concepts_map['relations'] = all_relations
+            lh_concepts_map[concept] = concepts_map
+        return(lh_concepts_map)
 
     def get_verbs(self, lighthouses):
         relations = self.person_relations
@@ -218,48 +239,52 @@ class Comet:
     def get_groundings(self, events, places=None, type='concepts', person='person'):
         if type == 'concepts':
             relations = self.comcepts_relations
-            num_generate = 5
+            num_generate = 10
         elif type == 'attributes':
             relations = self.attributes_relations
             num_generate = 5
         elif type == 'triplet':
             relations = self.triplet_relations
-            num_generate = 10
+            num_generate = 5
         elif type == 'person':
             relations = self.person_relations
             num_generate = 1
         else:
             print("Bad relation type: " + type)
-        pplaces = []
-        pevents = []
+        # pplaces = []
+        # pevents = []
         
-        if places:
-            for place in places:
-                pplaces.append(place)
+        # if places:
+        #     for place in places:
+        #         pplaces.append(place)
 
-        for event in events:
-            simple_events = self.split_event(event)
-            for sevent in simple_events:
-                pevents.append(sevent)
+        # for event in events:
+        #     simple_events = self.split_event(event)
+        #     for sevent in simple_events:
+        #         pevents.append(sevent)
         
-        lighthouses = pevents + pplaces
-
+        lighthouses = events + places
+        experts_ = []
         if len(self.experts) == 0:
             personx = ' PersonX'
         else:
             for expert in self.experts:
-                personx = personx + " and " + expert
+                experts_ = experts_ + " and " + expert
+            pesronx = ' PersonX ' + experts_
+        
+        if type == 'concepts':
+            personx = ' ___'
         #print(personx)
         groundings_map = {}
         for lighthouse in lighthouses:
             groundings = []
-           
+            orig_lighthouse = lighthouse
             lighthouse, count = re.subn("\d+", personx, lighthouse,  count=1)
             lighthouse = re.sub("\d+", "PersonY", lighthouse,  count=1)
             lighthouse = re.sub("\d+", "PersonZ", lighthouse)
            
             if count < 1:
-                lighthouse = " PersonX " + lighthouse
+                lighthouse = personx + " " + lighthouse
             #print(lighthouse)
             for rel in relations:
                 queries = []  
@@ -290,12 +315,12 @@ class Comet:
                                     grounding = grounding.replace("to","PersonX", 1)
                                 elif grounding.split()[0] != "PersonX":
                                     grounding = " PersonX" + grounding
-                                    grounding = grounding.replace("they","PersonXY")
+                                    grounding = grounding.replace("they","and others")
 
                         groundings.append(grounding)
                         groundings = list(dict.fromkeys(groundings))
                         #print(grounding)
-                groundings_map[lighthouse] = groundings
+                groundings_map[orig_lighthouse] = groundings
             #input()
         #groundings = list(dict.fromkeys(groundings))
         return(groundings_map)
@@ -307,31 +332,42 @@ class Comet:
         self.comet_collection.insert(concepts)
 
     def insert_grounding_to_db(self):
+        url_prefix = "http://ec2-18-159-140-240.eu-central-1.compute.amazonaws.com:7000/"
         movies = self.get_playground_movies()
         for movie_id in movies:
+            url = self.nre.get_movie_url(movie_id)
             for i, stage in enumerate(comet.get_stages(movie_id)):
                 events, places = self.get_playground_data(movie_id, i)
                 results = {}
                 results['movie_id'] = movie_id
                 results['stage'] = i
-                res_attr = self.get_groundings(events, places, 'attributes')
-                res_persons = self.get_groundings(events, places, 'person','PersonX')
+                results['url'] = url_prefix + url
+                #res_attr = self.get_groundings(events, places, 'attributes')
+                #res_persons = self.get_groundings(events, places, 'person','PersonX')
                 res_concepts = self.get_concepts(events, places)
-                res_verbs = self.get_verbs(events+places)
+                #res_verbs = self.get_verbs(events+places)
                 res_triplets = self.get_groundings(events, places, 'triplet')
+                for lh in res_triplets:
+                    print(res_triplets[lh])
+                    r = {}
+                    r['triplets'] = res_triplets[lh]
+                    r['concepts'] = res_concepts[lh]
+                    results[lh] = r
                 #results =  dict(res_attr.items() + res_persons.items() + res_concepts.items() + res_verbs.items() + res_triplets.items())
-                results.update(res_attr)
-                results.update(res_persons)
-                results.update(res_concepts)
-                results.update(res_verbs)
-                results.update(res_triplets)
+                #results.update(res_attr)
+                #results.update(res_persons)
+               
+                
+                #results.update(res_verbs)
+                #results.update(res_triplets)
+                #Save to db
                 self.save_concepts_todb(results)    
                 results.clear()
-                res_attr.clear()
-                res_persons.clear()
-                res_concepts.clear()
-                res_verbs.clear()
-                res_triplets.clear()
+                #res_attr.clear()
+                #res_persons.clear()
+                #res_concepts.clear()
+                #res_verbs.clear()
+                #res_triplets.clear()
 
 if __name__ == "__main__":
     print("model loading ...")
@@ -344,12 +380,17 @@ if __name__ == "__main__":
     # '3 eyes someone outside of the office','3 opens the door for the detectives with a calm demeanor','4 looks back as he crosses',
     # '1 quickly escorts someone down the lobby','the group move through the elevator']
     # places = ['in a gatehouse of an airport','at an airport entrance','on the sstreet','outside the staff entrance']
-    #movie_id = 'Movies/114206548'
-    #movie_id = 'Movies/114206999'
+    # movie_id = 'Movies/114207324'
+    # #movie_id = 'Movies/114206999'
     comet = Comet("./comet-atomic_2020_BART")
-    res = comet.nre.get_groundings_from_db('Movies/114206892', 0)
-    
-    print(res)
+    # #res = comet.nre.get_groundings_from_db('Movies/114206892', 0)
+    # events, places = comet.get_playground_data(movie_id, 0)
+    # res = comet.get_concepts(events, places)
+    # print(len(res.values()))
+    # for r in res:
+    #     print("Orig LH ", r)
+    #     print(res[r])
+    comet.insert_grounding_to_db()
     #Get data for movie, scene_element
     
     #print(results)

@@ -21,22 +21,29 @@ class CANON_API:
             return(1)
 
     def get_concept_from_entity(self, concept):
+        nouns = self.get_noun_from_concept(concept)
+        verbs = self.get_verb_from_concept(concept)
+        return(nouns, verbs)
+    
+    def get_noun_from_concept(self, concept):
+        ascore = self.get_score(concept) 
+        class_ = self.get_class_of_entity(concept)
         concept_presesnt = WordNetLemmatizer().lemmatize(concept,'n')
         lem = wordnet.lemmas(concept_presesnt, pos='n')
+        #print(lem)
         all_concepts = []
         if len(concept) > 2:
             related_forms = [lem[i].synset() for i in range(len(lem))]
+            #print(related_forms)
             for related_form in related_forms:
                 all_concepts.append(related_form.lemmas()[0].name())
-                # hypernyms = related_form.hypernyms()
-                # if len(hypernyms) < 1:
-                for rel in related_form.hypernyms():
-                    all_concepts.append(rel.lemmas()[0].name())
-                for rel in related_form.hyponyms():
-                    all_concepts.append(rel.lemmas()[0].name())
-                # else:
-                #     for rel in hypernyms:
-                #         all_concepts.append(rel.lemmas()[0].name())
+                if ascore < 0.15 and class_ == 'person':
+                    nn = related_form.hyponyms()
+                    for rel in nn:
+                        for r in rel.lemmas():
+                            all_concepts.append(r.name().lower())
+                # for rel in related_form.hyponyms():
+                #     all_concepts.append(rel.lemmas()[0].name())  
             all_concepts = list(dict.fromkeys(all_concepts)) 
         return(all_concepts)
 
@@ -46,11 +53,12 @@ class CANON_API:
         all_relations = []
         related_forms = [lem[i].synset() for i in range(len(lem))]
         for related_form in related_forms:
-            all_relations.append(related_form.lemmas()[0].name())
+            #print("Related form ", related_form)
+            all_relations.append(related_form.lemmas()[0].name().lower())
             # for rel in related_form.hypernyms():
             #     all_relations.append(rel.lemmas()[0].name())
-            for rel in related_form.hyponyms():
-                all_relations.append(rel.lemmas()[0].name())
+            # for rel in related_form.hyponyms():
+            #     all_relations.append(rel.lemmas()[0].name())
         all_relations = list(dict.fromkeys(all_relations))
         return(all_relations)
 
@@ -59,34 +67,52 @@ class CANON_API:
 
     def get_class_of_entity(self, concept):
         if len(wordnet.synsets(concept)) > 0:
-            syn = wordnet.synsets(concept)[0]
-            root = syn.root_hypernyms()[0].name()
-            if syn.name() == root:
-                return("attribute")
-            if len(syn.hypernyms()) >= 1:
-                abstract = syn.hypernyms()[0]
-            else:
-                return('unknown')
-            while abstract.name() != root:
-                #print(syn.name())
-                if syn.name() == 'artifact.n.01':
-                    return('artifact')
-                elif syn.name() == 'person.n.01':
-                    return('person')
-                elif syn.name() == 'animal.n.01':
-                    return('animal')
-                elif syn.name() == 'abstraction.n.06':
-                    return('abstraction')
-                elif syn.name() == 'action.n.01':
-                    return('action')
-                elif syn.name() == 'emotion.n.01':
-                    return('emotion')
-                else:
-                    syn = abstract
+            root = wordnet.synsets(concept)[0].root_hypernyms()[0].name()
+            for syn in wordnet.synsets(concept):
+                #syn = wordnet.synsets(concept)[0]
+                #print(wordnet.synsets(concept))
+               
+                if syn.name() == root:
+                    return("attribute")
+                if len(syn.hypernyms()) >= 1:
                     abstract = syn.hypernyms()[0]
+                else:
+                    return('abstraction')
+                while abstract.name() != root:
+                    #print(syn.name())
+                    if syn.name() == 'location.n.01' or syn.name() == 'area.n.05' or \
+                        syn.name() == 'room.n.01' or syn.name() == 'road.n.01' or syn.name() == 'forest.n.02':
+                        return('location')
+                    elif syn.name() == 'artifact.n.01':
+                        return('artifact')
+                    elif syn.name() == 'person.n.01':
+                        return('person')
+                    elif syn.name() == 'body_part.n.01':
+                        return('body_part')
+                    elif syn.name() == 'social_group.n.01':
+                        return('social_group')
+                    elif syn.name() == 'animal.n.01':
+                        return('animal')
+                    elif syn.name() == 'plant.n.02':
+                        return('plants')
+                    elif syn.name() == 'attribute.n.02' or syn.name() == 'number.n.02':
+                        return('attribute')
+                    elif syn.name() == 'abstraction.n.06':
+                        return('abstraction')
+                    elif syn.name() == 'action.n.01' or syn.name() == 'behavior.n.01' or \
+                        syn.name() == 'event.n.01' or syn.name() == 'cognition.n.01':
+                        return('action')
+                    elif syn.name() == 'emotion.n.01':
+                        return('emotion')
+                    else:
+                        if len(abstract.hypernyms()) > 0:
+                            syn = abstract
+                            abstract = syn.hypernyms()[0]
+                        else:
+                            return('none')
                     #continue 
                 # #path.append(syn)
-            return('unknown')
+            return('none')
         else:
             return('none')
 
@@ -129,7 +155,7 @@ def main():
        
         
         concept = input("Concept> ")
-        print(ascore.get_concept_from_entity(concept))
-
+        #print(ascore.get_concept_from_entity(concept))
+        print(ascore.get_class_of_entity(concept))
 if __name__ == '__main__':
     main()

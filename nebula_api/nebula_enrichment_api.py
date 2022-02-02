@@ -43,7 +43,22 @@ class NRE_API:
         for data in cursor:
             nebula_movies.append(data['_id'])
         return(nebula_movies)
-
+    
+    def get_movie_url(self, movie_id):
+        #nebula_movies = []
+        url = ""
+        #query = 'FOR doc IN Movies FILTER doc.split == \'0\' AND doc.splits_total == \'30\' RETURN doc'
+        query = 'FOR doc IN Movies FILTER doc._id == "{}" RETURN doc.url_path'.format(movie_id)
+        #query = 'FOR doc IN Movies FILTER doc._id == \'Movies/10715274\' RETURN doc'
+        #query = 'FOR doc IN Movies FILTER doc._id == \'Movies/12911567\' RETURN doc'
+        #query = 'FOR doc IN Movies FILTER doc._id == \'Movies/12476045\' OR doc._id == \'Movies/12465271\' RETURN doc'
+        cursor = self.db.aql.execute(query)
+        for data in cursor:
+            #print(data)
+            url = data
+        #print(url)
+        return(url)
+    
     def get_plugins(self):
         self.experts = []
         query = 'FOR doc IN nebula_experts RETURN doc'
@@ -147,7 +162,7 @@ class NRE_API:
 
     def get_vcomet_data(self, movie_id):
         vcomet_data = []
-        query = 'FOR doc IN nebula_vcomet_lighthouse_lsmdc FILTER doc.movie == \'' + movie_id + '\' RETURN doc'
+        query = 'FOR doc IN nebula_vcomet_lighthouse_lsmdc_max FILTER doc.movie == \'' + movie_id + '\' RETURN doc'
         cursor = self.db.aql.execute(query)
         for node in cursor:
             vcomet_data.append(node)
@@ -156,7 +171,7 @@ class NRE_API:
     
     def get_groundings_from_db(self, movie_id, scene_element):
         results = {}
-        query = 'FOR doc IN nebula_comet2020_concepts_lsmdc FILTER doc.movie_id == "{}" AND doc.stage == {} RETURN doc'.format(movie_id, scene_element)
+        query = 'FOR doc IN nebula_comet2020_concepts_candidates_lsmdc FILTER doc.movie_id == "{}" AND doc.stage == {} RETURN doc'.format(movie_id, scene_element)
         #print(query)
         cursor = self.db.aql.execute(query)
         for doc in cursor:
