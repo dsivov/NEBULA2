@@ -15,9 +15,8 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), 'models/tensorflow_models/research/audioset/'))
 sys.path.append(os.path.join(os.path.dirname(__file__), 'models/tensorflow_models/research/audioset/vggish'))
 sys.path.append(os.path.dirname(__file__))
-sys.path.append('../')
 
-sys.path.append('/home/ilan/git/NEBULA2/nebula_api/')
+
 import torch
 torch.set_grad_enabled(False)
 
@@ -27,7 +26,7 @@ import numpy as np
 from nebula_api.mdmmt_api.models.tensorflow_models.research.audioset.vggish import vggish_input as vggish_input
 import subprocess
 
-user_paths = os.path.join(os.environ['PYTHONPATH'], "nebula_api")
+user_paths = sys.modules['nebula_api'].__spec__.submodule_search_locations[0]
 
 from dumper import ffmpeg_audio_reader
 from dumper import read_frames_center_crop_batch
@@ -41,10 +40,9 @@ import base64
 from transformers import AutoModel, AutoTokenizer 
 video_id_cnt = 0   
 
-from nebula_api import scene_detector_api
-
 class NoAudio(Exception):
     pass
+
 
 class MDMMT_API():
     def __init__(self):
@@ -293,7 +291,7 @@ def main():
     mdmmt = MDMMT_API()
     path = '/dataset/development/1010_TITANIC_00_41_32_072-00_41_40_196.mp4'
     t_start=3
-    t_end=4.38
+    t_end=4.5
     vemb = mdmmt.encode_video(
         mdmmt.vggish_model, # adio modality
         mdmmt.vmz_model, # video modality
