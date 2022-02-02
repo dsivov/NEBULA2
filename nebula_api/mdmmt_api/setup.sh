@@ -1,4 +1,4 @@
-imkdir -p ckpts
+mkdir -p ckpts
 # https://github.com/facebookresearch/VMZ/
 wget https://github.com/bjuncek/VMZ/releases/download/test_models/irCSN_152_ig65m_from_scratch_f125286141.pth -O ckpts/irCSN_152_ig65m_from_scratch_f125286141.pth
 
