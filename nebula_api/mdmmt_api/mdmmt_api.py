@@ -27,11 +27,7 @@ import numpy as np
 from nebula_api.mdmmt_api.models.tensorflow_models.research.audioset.vggish import vggish_input as vggish_input
 import subprocess
 
-<<<<<<< HEAD
 user_paths = os.path.join(os.environ['PYTHONPATH'], "nebula_api")
-=======
-user_paths = os.path.join(os.environ['PYTHONPATH'], "nebula_api") # sys.modules['nebula_api'].__spec__.submodule_search_locations[0]
->>>>>>> 3b71e46 (Updated dockerfile, and mdmmt_api gives avg/max based on scores, next upgrade based on vectors and then ffmpeg to cv2 hopefully for better results)
 
 from dumper import ffmpeg_audio_reader
 from dumper import read_frames_center_crop_batch
@@ -137,45 +133,7 @@ class MDMMT_API():
         frame_crop_size=624,
         per_batch_size=4,
         frames_per_clip=32):
-
-        # avg_embs = []
-        # avg_embs_conc = []
-        # test = []
-        
-        # if frames_per_clip == 1:
-        #     delta_t = float((t_end - t_start) / fps)
-        #     delta_end = t_start
-        #     for f in range(fps):
-        #         avg_embs = []
-        #         delta_end += delta_t
-        #         frames_batch_iter = read_frames_center_crop_batch(
-        #             path,
-        #             fps=fps,
-        #             frame_size=frame_size,
-        #             frame_crop_size=frame_crop_size,
-        #             batch_num_frames=per_batch_size*frames_per_clip,
-        #             t_start=t_start,
-        #             t_end=delta_end)
-                
-        #         for frames in frames_batch_iter:
-        #             if len(frames) % frames_per_clip > 0:
-        #                 n = len(frames)
-        #                 n1 = int(len(frames) // frames_per_clip * frames_per_clip)
-        #                 frames1 = frames[:n1]
-        #                 # increase frame rate in the last video segment
-        #                 idxs = np.ceil(np.linspace(n1, n-1, frames_per_clip)).astype(np.long)
-        #                 frames2 = frames[idxs]
-        #                 frames = np.concatenate([frames1, frames2], axis=0)
-        #             assert len(frames) % frames_per_clip == 0
-        #             batch_frames = frames.reshape(-1, frames_per_clip, frame_crop_size, frame_crop_size, 3)
-
-        #             avg_embs.append(model(batch_frames))
-
-        #         avg_embs_conc.append(np.concatenate(avg_embs, axis=0))
-
-            # avg_embs_conc = np.concatenate(avg_embs_conc, axis=0)
-            # post-process to (28,512) instead of (28)
-        
+               
         frames_batch_iter = read_frames_center_crop_batch(
                     path,
                     fps=fps,
@@ -206,11 +164,9 @@ class MDMMT_API():
             embs.append(model(batch_frames))
        
         embs = np.concatenate(embs, axis=0)
-        timings = np.array(timings) # (nsegm, 2)
-        # if frames_per_clip != 1:
+        timings = np.array(timings)
         return timings, embs
-        # else:
-        #     return timings, avg_embs_conc
+
 
     def visual_clip_compute_embs(self,
         model,
@@ -225,6 +181,7 @@ class MDMMT_API():
         embs = []
         timings = []
         t = 0
+        # TODO: Support 32 frames
         frames = scene_detector_api.divide_movie_by_timestamp(path, 3, 4.38, (frame_size, frame_size))
         frames = np.array(frames) # must be 32 frames
         delta = len(frames) / fps
@@ -280,31 +237,31 @@ class MDMMT_API():
             timings_vggish, embs_vggish = None, None
         timings_vmz, embs_vmz = self.visual_compute_embs(vmz_model, path, t_start, t_end,
                                                     fps=28, frames_per_clip=32, frame_crop_size=224, frame_size=224)
-        timings_clip, embs_clip = self.visual_clip_compute_embs(clip_model, path, t_start, t_end,
+        timings_clip, embs_clip = self.visual_compute_embs(clip_model, path, t_start, t_end,
                                                     fps=28, frames_per_clip=1, frame_crop_size=224, frame_size=224)
 
 
-            features = {
-                'VIDEO': embs_vmz,
-                'CLIP': embs_clip,
-                'tf_vggish': embs_vggish,
-            }
+        features = {
+            'VIDEO': embs_vmz,
+            'CLIP': embs_clip,
+            'tf_vggish': embs_vggish,
+        }
 
-            features_t = {
-                'VIDEO': timings_vmz,
-                'CLIP': timings_clip,
-                'tf_vggish': timings_vggish,
-            }
-            
-            all_features, all_features_t, all_features_mask = self.prepare_features(features, features_t)
-            
-            all_features = self.dict_to_cuda(all_features)
-            all_features_t = self.dict_to_cuda(all_features_t)
-            all_features_mask = self.dict_to_cuda(all_features_mask)
-            
-            out = model_vid(all_features, all_features_t, all_features_mask) # (1, 512*3)
-            output.append(out[0])
-        return torch.max(torch.stack(output), dim=0) # output
+        features_t = {
+            'VIDEO': timings_vmz,
+            'CLIP': timings_clip,
+            'tf_vggish': timings_vggish,
+        }
+        
+        all_features, all_features_t, all_features_mask = self.prepare_features(features, features_t)
+        
+        all_features = self.dict_to_cuda(all_features)
+        all_features_t = self.dict_to_cuda(all_features_t)
+        all_features_mask = self.dict_to_cuda(all_features_mask)
+        
+        out = model_vid(all_features, all_features_t, all_features_mask) # (1, 512*3)
+        #output.append(out[0])
+        return out[0]#torch.max(torch.stack(output), dim=0) # output
 
     def encode_text(self, text):
         emb = self.model_txt([text])[0]
@@ -317,11 +274,26 @@ class MDMMT_API():
     def sim(x1, x2):
         return (x1*x2).sum()
 
+def compute_score_with_ffmpeg(mdmmt, vemb, texts, t_start, t_end, path):
+    # tembs = mdmmt.batch_encode_text(texts)
+    # scores = torch.matmul(tembs, vemb)
+    # for txt, score in zip(texts, scores):
+    #     print(score.item(), txt)
+    pass
+
+
+def compute_score_with_opencv(mdmmt, vemb, texts, frame_start, frame_end, path):
+    # tembs = mdmmt.batch_encode_text(texts)
+    # scores = torch.matmul(tembs, vemb)
+    # for txt, score in zip(texts, scores):
+    #     print(score.item(), txt)
+    pass
+
 def main():
     mdmmt = MDMMT_API()
     path = '/dataset/development/1010_TITANIC_00_41_32_072-00_41_40_196.mp4'
     t_start=3
-    t_end=4
+    t_end=4.38
     vemb = mdmmt.encode_video(
         mdmmt.vggish_model, # adio modality
         mdmmt.vmz_model, # video modality
@@ -349,7 +321,7 @@ def main():
         'the man jumps'
     ]
     tembs = mdmmt.batch_encode_text(texts)
-    scores = torch.matmul(tembs, vemb[0])
+    scores = torch.matmul(tembs, vemb)
     for txt, score in zip(texts, scores):
         print(score.item(), txt)
     # tembs = mdmmt.batch_encode_text(texts)
