@@ -236,9 +236,9 @@ class MDMMT_API():
         except NoAudio:
             timings_vggish, embs_vggish = None, None
         timings_vmz, embs_vmz = self.visual_compute_embs(vmz_model, path, t_start, t_end,
-                                                    fps=28, frames_per_clip=32, frame_crop_size=224, frame_size=224)
+                                                    fps=23, frames_per_clip=23, frame_crop_size=224, frame_size=224)
         timings_clip, embs_clip = self.visual_compute_embs(clip_model, path, t_start, t_end,
-                                                    fps=28, frames_per_clip=1, frame_crop_size=224, frame_size=224)
+                                                    fps=23, frames_per_clip=1, frame_crop_size=224, frame_size=224)
 
 
         features = {
