@@ -3,7 +3,7 @@ from nltk.stem.wordnet import WordNetLemmatizer
 
 #Please use the NLTK Downloader to obtain the resource:
 
-#  >>> import nltk
+import nltk
 #  >>> nltk.download('wordnet')
 
 class CANON_API:
@@ -64,6 +64,12 @@ class CANON_API:
 
             # for form in related_form:
             #     print(form)
+    def get_class_from_context(self, context):
+        corpa = nltk.word_tokenize(context)
+        concepts_pos = nltk.pos_tag(corpa) 
+        for concept_pos in concepts_pos:
+            print(concept_pos)
+
 
     def get_class_of_entity(self, concept):
         if len(wordnet.synsets(concept)) > 0:
@@ -79,7 +85,7 @@ class CANON_API:
                 else:
                     return('abstraction')
                 while abstract.name() != root:
-                    #print(syn.name())
+                    print(syn.name())
                     if syn.name() == 'location.n.01' or syn.name() == 'area.n.05' or \
                         syn.name() == 'room.n.01' or syn.name() == 'road.n.01' or syn.name() == 'forest.n.02':
                         return('location')
