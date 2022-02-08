@@ -162,7 +162,7 @@ class NRE_API:
 
     def get_vcomet_data(self, movie_id):
         vcomet_data = []
-        query = 'FOR doc IN nebula_vcomet_lighthouse_lsmdc_max FILTER doc.movie == \'' + movie_id + '\' RETURN doc'
+        query = 'FOR doc IN nebula_vcomet_lighthouse_lsmdc_mean FILTER doc.movie == \'' + movie_id + '\' RETURN doc'
         cursor = self.db.aql.execute(query)
         for node in cursor:
             vcomet_data.append(node)
