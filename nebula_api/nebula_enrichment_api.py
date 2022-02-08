@@ -171,7 +171,7 @@ class NRE_API:
     
     def get_groundings_from_db(self, movie_id, scene_element):
         results = {}
-        query = 'FOR doc IN nebula_comet2020_concepts_candidates_lsmdc FILTER doc.movie_id == "{}" AND doc.stage == {} RETURN doc'.format(movie_id, scene_element)
+        query = 'FOR doc IN nebula_comet2020_lsmdc_scored FILTER doc.movie_id == "{}" AND doc.stage == {} RETURN doc'.format(movie_id, scene_element)
         #print(query)
         cursor = self.db.aql.execute(query)
         for doc in cursor:
