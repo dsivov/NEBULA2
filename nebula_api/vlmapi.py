@@ -35,22 +35,18 @@ class VLM_API:
             print(f"fn path: {fn}")
         return movie_info, fps, fn
 
-    # Clip requires to get the index (stage number) of the scene element
-    def get_scene_element_index(self, movie_info, scene_element):
-        idx = -1
-        idx = [i for i, e in enumerate(movie_info['scene_elements']) if e == scene_element][0]
-        if idx != -1:
-            return idx
-        raise Exception("Scene element not found in movie.")
-
     # Prepare arguments to call MDMMT MAX or MDMMT MIN
-    def prepare_mdmmt_args(self, scene_element, fps, class_name):
+    def prepare_mdmmt_args(self, movie_info, scene_element, fps, class_name):
         vggish_model, vmz_model, clip_model, model_vid = self.mdmmt_api.vggish_model, \
                                                          self.mdmmt_api.vmz_model, \
                                                          self.mdmmt_api.clip_model, \
                                                          self.mdmmt_api.model_vid
-        t_start = scene_element[0] / fps
-        t_end = scene_element[1] / fps
+        if scene_element < len(movie_info['scene_elements']):
+            scene_element_to_frames = movie_info['scene_elements'][scene_element]
+        else:
+            raise Exception("Scene element wasn't found, probably the stage is too big, try a lower number.")
+        t_start = scene_element_to_frames[0] / fps
+        t_end = scene_element_to_frames[1] / fps
         encode_type = 'mean'
         if class_name == 'mdmmt_max':
             encode_type = 'max'
@@ -59,16 +55,15 @@ class VLM_API:
 
     def encode_video(self, mid, scene_element, class_name='clip_rn'):
         movie_info, fps, fn = self.download_and_get_minfo(mid, to_print=True)
-        scene_element_idx = self.get_scene_element_index(movie_info, scene_element)
         path = fn
         if class_name == 'mdmmt_max' or class_name == 'mdmmt_mean':
             vggish_model, vmz_model, clip_model, model_vid, t_start, t_end, fps, encode_type =  \
-                self.prepare_mdmmt_args(scene_element, fps, class_name)
+                self.prepare_mdmmt_args(movie_info, scene_element, fps, class_name)
 
         if class_name == 'clip_rn':
-            vid_embedding = self.clip_rn.clip_encode_video(fn, mid, scene_element_idx)
+            vid_embedding = self.clip_rn.clip_encode_video(fn, mid, scene_element)
         elif class_name == 'clip_vit':
-            vid_embedding = self.clip_vit.clip_encode_video(fn, mid, scene_element_idx)
+            vid_embedding = self.clip_vit.clip_encode_video(fn, mid, scene_element)
         elif class_name == 'mdmmt_max':
             vid_embedding = self.mdmmt_api.encode_video(vggish_model, vmz_model, clip_model, model_vid, path, t_start, t_end, fps, encode_type)
         elif class_name == 'mdmmt_mean':
@@ -105,19 +100,19 @@ def main():
 
     # Encode video & text of clip_rn
     print("Encoding video and text of CLIP_RN")
-    vlm_api.encode_video(mid="Movies/114207205", scene_element=[0, 48], class_name='clip_rn')
+    vlm_api.encode_video(mid="Movies/114207205", scene_element=0, class_name='clip_rn')
     vlm_api.encode_text(text[0], class_name='clip_rn')
     print("----------------------")
 
     print("/nEncoding video and text of CLIP_VIT")
     # Encode video & text of clip_vit
-    vlm_api.encode_video(mid="Movies/114207205", scene_element=[0, 48], class_name='clip_vit')
+    vlm_api.encode_video(mid="Movies/114207205", scene_element=0, class_name='clip_vit')
     vlm_api.encode_text(text[0], class_name='clip_vit')
     print("----------------------")
 
     print("/nEncoding video and text of MDMMT_MAX")
     # Encode video & text of mdmmt_max, different movie here (Titanic)
-    feat = vlm_api.encode_video(mid="Movies/114208744", scene_element=[100, 195], class_name='mdmmt_max')
+    feat = vlm_api.encode_video(mid="Movies/114208744", scene_element=2, class_name='mdmmt_max')
     print(f"MDMMT MAX movie embedding: {feat}")
     text_feat = vlm_api.encode_text(text, class_name='mdmmt_max')
     print(f"MDMMT MEAN text embedding: {text_feat}")
@@ -129,7 +124,7 @@ def main():
 
     print("/nEncoding video and text of MDMMT_MEAN")
     # Encode video & text of mdmmt_mean, different movie here (Titanic)
-    feat = vlm_api.encode_video(mid="Movies/114208744", scene_element=[100, 195], class_name='mdmmt_mean')
+    feat = vlm_api.encode_video(mid="Movies/114208744", scene_element=2, class_name='mdmmt_mean')
     print(f"MDMMT MEAN movie embedding: {feat}")
     text_feat = vlm_api.encode_text(text, class_name='mdmmt_mean')
     print(f"MDMMT MEAN text embedding: {text_feat}")
