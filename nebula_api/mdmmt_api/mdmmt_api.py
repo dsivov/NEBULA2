@@ -36,15 +36,11 @@ from models.vmz_model import VMZ_irCSN_152
 from models.clip_model import CLIP
 from models.mmt import BertTXT, BertVID
 
-from nebula_api import scene_detector_api
-
 import base64
 from transformers import AutoModel, AutoTokenizer 
 video_id_cnt = 0   
 
 import cv2
-
-# from vcomet import vcomet
 
 class NoAudio(Exception):
     pass
