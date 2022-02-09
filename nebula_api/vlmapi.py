@@ -75,9 +75,9 @@ class VLM_API:
     
     def encode_text(self, text, class_name='clip_rn'):
         if class_name == 'clip_rn':
-            text_embedding = self.clip_rn.clip_encode_text(text)
+            text_embedding = self.clip_rn.clip_batch_encode_text(text)
         elif class_name == 'clip_vit':
-            text_embedding = self.clip_vit.clip_encode_text(text)
+            text_embedding = self.clip_vit.clip_batch_encode_text(text)
         elif class_name == 'mdmmt_max':
             text_embedding = self.mdmmt_api.batch_encode_text(text)
         elif class_name == 'mdmmt_mean':
@@ -101,13 +101,15 @@ def main():
     # Encode video & text of clip_rn
     print("Encoding video and text of CLIP_RN")
     vlm_api.encode_video(mid="Movies/114207205", scene_element=0, class_name='clip_rn')
-    vlm_api.encode_text(text[0], class_name='clip_rn')
+    text_feat = vlm_api.encode_text(text, class_name='clip_rn')
+    print(f"Length of CLIP_RN text embeddings: {len(text_feat)}")
     print("----------------------")
 
     print("/nEncoding video and text of CLIP_VIT")
     # Encode video & text of clip_vit
     vlm_api.encode_video(mid="Movies/114207205", scene_element=0, class_name='clip_vit')
-    vlm_api.encode_text(text[0], class_name='clip_vit')
+    text_feat = vlm_api.encode_text(text, class_name='clip_vit')
+    print(f"Length of CLIP_VIT text embeddings: {len(text_feat)}")
     print("----------------------")
 
     print("/nEncoding video and text of MDMMT_MAX")
