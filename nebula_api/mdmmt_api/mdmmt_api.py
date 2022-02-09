@@ -36,9 +36,15 @@ from models.vmz_model import VMZ_irCSN_152
 from models.clip_model import CLIP
 from models.mmt import BertTXT, BertVID
 
+from nebula_api import scene_detector_api
+
 import base64
 from transformers import AutoModel, AutoTokenizer 
 video_id_cnt = 0   
+
+import cv2
+
+# from vcomet import vcomet
 
 class NoAudio(Exception):
     pass
@@ -144,6 +150,7 @@ class MDMMT_API():
         timings = []
         t = 0
         delta = frames_per_clip / fps
+        count = 0
         for frames in frames_batch_iter:
             if len(frames) % frames_per_clip > 0:
                 n = len(frames)
@@ -166,34 +173,46 @@ class MDMMT_API():
         return timings, embs
 
 
-    def visual_clip_compute_embs(self,
-        model,
-        path,
-        t_start,
-        t_end,
-        fps=32,
-        frame_size=624,
-        frame_crop_size=624,
-        per_batch_size=4,
-        frames_per_clip=32):
-        embs = []
-        timings = []
-        t = 0
-        # TODO: Support 32 frames
-        frames = scene_detector_api.divide_movie_by_timestamp(path, 3, 4.38, (frame_size, frame_size))
-        frames = np.array(frames) # must be 32 frames
-        delta = len(frames) / fps
-        for idx in range(len(frames)):
-            timings.append((t, t + delta))
-            t += delta
+    # def visual_clip_compute_embs(self,
+    #     model,
+    #     path,
+    #     t_start,
+    #     t_end,
+    #     fps=32,
+    #     frame_size=624,
+    #     frame_crop_size=624,
+    #     per_batch_size=4,
+    #     frames_per_clip=32):
+    #     embs = []
+    #     timings = []
+    #     t = 0
+    #     frames, fps = scene_detector_api.divide_movie_by_timestamp(path, t_start, t_end, (frame_size, frame_size))
+    #     frames = np.array(frames)
+    #     delta = len(frames) / fps
+    #     for idx in range(len(frames)):
+    #         timings.append((t, t + delta))
+    #         t += delta
         
-        for idx in range(8):
-            batch_frames = frames[idx*4:(idx+1)*4].reshape(-1, frames_per_clip, frame_crop_size, frame_crop_size, 3)
-            embs.append(model(batch_frames))
-       
-        embs = np.concatenate(embs, axis=0)
-        timings = np.array(timings) # (nsegm, 2)
-        return timings, embs
+    #     for idx in range((len(frames) // per_batch_size)):
+    #         batch_frames = frames[idx*per_batch_size:(idx+1)*per_batch_size].reshape(-1, frames_per_clip, frame_crop_size, frame_crop_size, 3)
+    #         embs.append(model(batch_frames))
+
+    #     if (len(frames) % per_batch_size) > 0:
+    #         n = len(frames)
+    #         n1 = len(frames) % per_batch_size
+    #         frames1 = frames
+    #         frames2 = frames[-(per_batch_size - n1):]
+    #         frames3 = np.concatenate([frames1, frames2], axis=0)
+    #         batch_frames = frames3[(idx+1)*per_batch_size:].reshape(-1, frames_per_clip, frame_crop_size, frame_crop_size, 3)
+    #         embs.append(model(batch_frames))
+        
+    #         for _ in range((per_batch_size - n1)):
+    #             timings.append((t, t + delta))
+    #             t += delta
+
+    #     embs = np.concatenate(embs, axis=0)
+    #     timings = np.array(timings) # (nsegm, 2)
+    #     return timings, embs
 
     def prepare_features(self, features, features_t):
         all_features = {}
@@ -228,38 +247,49 @@ class MDMMT_API():
         return {k:v.cuda() for k, v in d.items()}
 
 
-    def encode_video(self, vggish_model, vmz_model, clip_model, model_vid, path, t_start=None, t_end=None):
+    def encode_video(self, vggish_model, vmz_model, clip_model, model_vid, path, t_start=None, t_end=None, fps=23, encode_type='max'):
         try:
             timings_vggish, embs_vggish = self.vggish_compute_embs(vggish_model, path, t_start, t_end)
         except NoAudio:
             timings_vggish, embs_vggish = None, None
         timings_vmz, embs_vmz = self.visual_compute_embs(vmz_model, path, t_start, t_end,
-                                                    fps=23, frames_per_clip=23, frame_crop_size=224, frame_size=224)
-        timings_clip, embs_clip = self.visual_compute_embs(clip_model, path, t_start, t_end,
-                                                    fps=23, frames_per_clip=1, frame_crop_size=224, frame_size=224)
+                                                    fps=fps, frames_per_clip=32, frame_crop_size=224, frame_size=224)
 
+        output = []
+        time_length = int(t_end - t_start)
+        t_end = t_start + 1
+        for _ in range(time_length):
+            timings_clip, embs_clip = self.visual_compute_embs(clip_model, path, t_start, t_end,
+                                                fps=fps, frames_per_clip=1, frame_crop_size=224, frame_size=224)
+            t_start += 1
+            t_end += 1
+            features = {
+                'VIDEO': embs_vmz,
+                'CLIP': embs_clip,
+                'tf_vggish': embs_vggish,
+            }
 
-        features = {
-            'VIDEO': embs_vmz,
-            'CLIP': embs_clip,
-            'tf_vggish': embs_vggish,
-        }
-
-        features_t = {
-            'VIDEO': timings_vmz,
-            'CLIP': timings_clip,
-            'tf_vggish': timings_vggish,
-        }
-        
-        all_features, all_features_t, all_features_mask = self.prepare_features(features, features_t)
-        
-        all_features = self.dict_to_cuda(all_features)
-        all_features_t = self.dict_to_cuda(all_features_t)
-        all_features_mask = self.dict_to_cuda(all_features_mask)
-        
-        out = model_vid(all_features, all_features_t, all_features_mask) # (1, 512*3)
-        #output.append(out[0])
-        return out[0]#torch.max(torch.stack(output), dim=0) # output
+            features_t = {
+                'VIDEO': timings_vmz,
+                'CLIP': timings_clip,
+                'tf_vggish': timings_vggish,
+            }
+            
+            all_features, all_features_t, all_features_mask = self.prepare_features(features, features_t)
+            
+            all_features = self.dict_to_cuda(all_features)
+            all_features_t = self.dict_to_cuda(all_features_t)
+            all_features_mask = self.dict_to_cuda(all_features_mask)
+            
+            out = model_vid(all_features, all_features_t, all_features_mask) # (1, 512*3)
+            output.append(out[0])
+        if len(output) > 1:
+            if encode_type == 'max':
+                return torch.max(torch.stack(output), dim=0)[0]
+            elif encode_type == 'mean':
+                return torch.mean(torch.stack(output), dim=0)
+        else:
+            return output[0]
 
     def encode_text(self, text):
         emb = self.model_txt([text])[0]
@@ -271,35 +301,33 @@ class MDMMT_API():
 
     def sim(x1, x2):
         return (x1*x2).sum()
+    
 
-def compute_score_with_ffmpeg(mdmmt, vemb, texts, t_start, t_end, path):
-    # tembs = mdmmt.batch_encode_text(texts)
-    # scores = torch.matmul(tembs, vemb)
-    # for txt, score in zip(texts, scores):
-    #     print(score.item(), txt)
-    pass
-
-
-def compute_score_with_opencv(mdmmt, vemb, texts, frame_start, frame_end, path):
-    # tembs = mdmmt.batch_encode_text(texts)
-    # scores = torch.matmul(tembs, vemb)
-    # for txt, score in zip(texts, scores):
-    #     print(score.item(), txt)
-    pass
 
 def main():
     mdmmt = MDMMT_API()
     path = '/dataset/development/1010_TITANIC_00_41_32_072-00_41_40_196.mp4'
-    t_start=3
-    t_end=4.5
+    t_start=0
+    t_end=7
+    # t_start, t_end = get_time_by_frames(frame_start, frame_stop, path)
+    # get_places_and_events_and_actions(t_start, t_end, path)
     vemb = mdmmt.encode_video(
         mdmmt.vggish_model, # adio modality
         mdmmt.vmz_model, # video modality
         mdmmt.clip_model, # image modality
         mdmmt.model_vid, # aggregator
-        path, t_start, t_end)
+        path, t_start, t_end, fps=23, encode_type='mean')
     texts = [
         'actor stands closely behind a red haired woman',
+        'actor behind a woman',
+        'woman wants to jump off the ship',
+        'hand',
+        'woman',
+        'man',
+        'man and woman',
+        'people',
+        'picture of a hand',
+        'a man is handing a hand',
         'this scene was filmed on a cathedral balcony',
         'a man in t-shirt sits near the computer',
         'a man in shirt sits near the computer',
