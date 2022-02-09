@@ -67,12 +67,22 @@ class CLIP_API:
         with torch.no_grad():
             text_features = self.model.encode_text(text_input)
             text_features /= text_features.norm(dim=-1, keepdim=True)
-        print(text_features)
+        #print(text_features)
         return(text_features)
+    
+    def clip_batch_encode_text(self, texts):
+        text_input = clip.tokenize(texts).cuda()
+        batch_features = []
+        with torch.no_grad():
+            text_features = self.model.encode_text(text_input)
+        for text_feature in text_features:
+            text_feature /= text_feature.norm(dim=-1, keepdim=True)
+            batch_features.append(text_feature)
+        return(batch_features)
 
 def main():
-    clip=CLIP_API('vit')
-    clip.clip_encode_video('/home/dimas/0028_The_Crying_Game_00_53_53_876-00_53_55_522.mp4','Movies/114207205',0)
-    clip.clip_encode_text("dima dima")
+    clip=CLIP_API('rn')
+    #clip.clip_encode_video('/home/dimas/0028_The_Crying_Game_00_53_53_876-00_53_55_522.mp4','Movies/114207205',0)
+    clip.clip_batch_encode_text([])
 if __name__ == "__main__":
     main()

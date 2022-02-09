@@ -39,6 +39,7 @@ from models.mmt import BertTXT, BertVID
 import base64
 from transformers import AutoModel, AutoTokenizer 
 video_id_cnt = 0   
+import scene_detector_api
 
 # import cv2
 
