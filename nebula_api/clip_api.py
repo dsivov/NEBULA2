@@ -56,7 +56,7 @@ class CLIP_API:
                         feature_mdfs.append(feature_t.cpu().detach().numpy())   
                 feature_mean = np.mean(feature_mdfs, axis=0)
                 feature_t = torch.from_numpy(feature_mean)                
-                print(feature_t)
+                #print(feature_t)
                 return(feature_t)
                 #print (start_frame)                     
         else:
