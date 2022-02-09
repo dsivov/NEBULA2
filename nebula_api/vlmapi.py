@@ -1,7 +1,5 @@
 from re import I
-import clip
 import torch
-import cv2
 import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
