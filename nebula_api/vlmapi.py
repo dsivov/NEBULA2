@@ -22,7 +22,7 @@ class VLM_API:
         self.vcomet = VCOMET_KG()
         self.remote_api = RemoteAPIUtility()
         self.mdmmt_api = MDMMT_API()
-        self.available_class_names = ['clip_vit', 'clip_rn', 'mdmmt_max', 'mdmmt_mean']
+        self.available_class_names = ['clip_vit', 'clip_rn', 'mdmmt_max', 'mdmmt_mean', 'mdmmt_legacy']
         print(f"Available class names: {self.available_class_names}")
     
     def download_and_get_minfo(self, mid, to_print=False):
@@ -47,6 +47,8 @@ class VLM_API:
             raise Exception("Scene element wasn't found, probably the stage is too big, try a lower number.")
         t_start = scene_element_to_frames[0] / fps
         t_end = scene_element_to_frames[1] / fps
+        if (scene_element_to_frames[1] - scene_element_to_frames[0]) < fps:
+            print('WARNING: Scene element is less than a second.')
         encode_type = 'mean'
         if class_name == 'mdmmt_max':
             encode_type = 'max'
@@ -56,7 +58,7 @@ class VLM_API:
     def encode_video(self, mid, scene_element, class_name='clip_rn'):
         movie_info, fps, fn = self.download_and_get_minfo(mid, to_print=True)
         path = fn
-        if class_name == 'mdmmt_max' or class_name == 'mdmmt_mean':
+        if class_name == 'mdmmt_max' or class_name == 'mdmmt_mean' or class_name == 'mdmmt_legacy':
             vggish_model, vmz_model, clip_model, model_vid, t_start, t_end, fps, encode_type =  \
                 self.prepare_mdmmt_args(movie_info, scene_element, fps, class_name)
 
@@ -68,6 +70,8 @@ class VLM_API:
             vid_embedding = self.mdmmt_api.encode_video(vggish_model, vmz_model, clip_model, model_vid, path, t_start, t_end, fps, encode_type)
         elif class_name == 'mdmmt_mean':
             vid_embedding = self.mdmmt_api.encode_video(vggish_model, vmz_model, clip_model, model_vid, path, t_start, t_end, fps, encode_type)
+        elif class_name == 'mdmmt_legacy':
+            vid_embedding = self.mdmmt_api.encode_video_legacy(vggish_model, vmz_model, clip_model, model_vid, path, t_start, t_end, fps, encode_type)
         else:
             print(f"Error! Available class names: {self.available_class_names}")
             raise Exception("Class name you entered was not found.")
@@ -76,11 +80,15 @@ class VLM_API:
     def encode_text(self, text, class_name='clip_rn'):
         if class_name == 'clip_rn':
             text_embedding = self.clip_rn.clip_batch_encode_text(text)
+            text_embedding = torch.stack(text_embedding,axis=0)
         elif class_name == 'clip_vit':
             text_embedding = self.clip_vit.clip_batch_encode_text(text)
+            text_embedding = torch.stack(text_embedding,axis=0)
         elif class_name == 'mdmmt_max':
             text_embedding = self.mdmmt_api.batch_encode_text(text)
         elif class_name == 'mdmmt_mean':
+            text_embedding = self.mdmmt_api.batch_encode_text(text)
+        elif class_name == 'mdmmt_legacy':
             text_embedding = self.mdmmt_api.batch_encode_text(text)
         else:
             print(f"Error! Available class names: {self.available_class_names}")
@@ -129,6 +137,17 @@ def main():
     feat = vlm_api.encode_video(mid="Movies/114208744", scene_element=2, class_name='mdmmt_mean')
     print(f"MDMMT MEAN movie embedding: {feat}")
     text_feat = vlm_api.encode_text(text, class_name='mdmmt_mean')
+    print(f"MDMMT MEAN text embedding: {text_feat}")
+    scores = torch.matmul(tembs, feat)
+    for txt, score in zip(text, scores):
+        print(score.item(), txt)
+    print("----------------------")
+
+    print("/nEncoding video and text of MDMMT_LEGACY")
+    # Encode video & text of mdmmt_legacy, different movie here (Titanic)
+    feat = vlm_api.encode_video(mid="Movies/114208744", scene_element=2, class_name='mdmmt_legacy')
+    print(f"MDMMT MEAN movie embedding: {feat}")
+    text_feat = vlm_api.encode_text(text, class_name='mdmmt_legacy')
     print(f"MDMMT MEAN text embedding: {text_feat}")
     scores = torch.matmul(tembs, feat)
     for txt, score in zip(text, scores):

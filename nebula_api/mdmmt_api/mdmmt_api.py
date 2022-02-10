@@ -287,6 +287,41 @@ class MDMMT_API():
                 return torch.mean(torch.stack(output), dim=0)
         else:
             return output[0]
+    
+
+    def encode_video_legacy(self, vggish_model, vmz_model, clip_model, model_vid, path, t_start=None, t_end=None, fps=23, encode_type='max'):
+        try:
+            timings_vggish, embs_vggish = self.vggish_compute_embs(vggish_model, path, t_start, t_end)
+        except NoAudio:
+            timings_vggish, embs_vggish = None, None
+        timings_vmz, embs_vmz = self.visual_compute_embs(vmz_model, path, t_start, t_end,
+                                                    fps=fps, frames_per_clip=32, frame_crop_size=224, frame_size=224)
+
+
+        timings_clip, embs_clip = self.visual_compute_embs(clip_model, path, t_start, t_end,
+                                            fps=fps, frames_per_clip=1, frame_crop_size=224, frame_size=224)
+        t_start += 1
+        t_end += 1
+        features = {
+            'VIDEO': embs_vmz,
+            'CLIP': embs_clip,
+            'tf_vggish': embs_vggish,
+        }
+
+        features_t = {
+            'VIDEO': timings_vmz,
+            'CLIP': timings_clip,
+            'tf_vggish': timings_vggish,
+        }
+        
+        all_features, all_features_t, all_features_mask = self.prepare_features(features, features_t)
+        
+        all_features = self.dict_to_cuda(all_features)
+        all_features_t = self.dict_to_cuda(all_features_t)
+        all_features_mask = self.dict_to_cuda(all_features_mask)
+        
+        out = model_vid(all_features, all_features_t, all_features_mask) # (1, 512*3)
+        return out[0]
 
     def encode_text(self, text):
         emb = self.model_txt([text])[0]
