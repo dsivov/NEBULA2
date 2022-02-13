@@ -102,27 +102,17 @@ class VLM_API:
 def main():
     vlm_api = VLM_API()
 
-    text = ['hand',
-            'picture of a hand'
-        ]
-
-    # Encode video & text of clip_rn
-    print("Encoding video and text of CLIP_RN")
-    vlm_api.encode_video(mid="Movies/114207205", scene_element=0, class_name='clip_rn')
-    text_feat = vlm_api.encode_text(text, class_name='clip_rn')
-    print(f"Length of CLIP_RN text embeddings: {len(text_feat)}")
-    print("----------------------")
-
-    print("/nEncoding video and text of CLIP_VIT")
-    # Encode video & text of clip_vit
-    vlm_api.encode_video(mid="Movies/114207205", scene_element=0, class_name='clip_vit')
-    text_feat = vlm_api.encode_text(text, class_name='clip_vit')
-    print(f"Length of CLIP_VIT text embeddings: {len(text_feat)}")
-    print("----------------------")
+    text = ['Dressed up men and women getting off a ship',
+            'Dressed up men and women',
+            'men and women',
+            'Vulcano abrupted while dressed up men and women getting off a ship',
+            'the thief was found when dressed up men and women getting off a ship',
+            'Dressed up men and women getting off a ship, mouse went by the door',
+            'Dressed up men and women getting off a ship and cat played with dog']
 
     print("/nEncoding video and text of MDMMT_MAX")
     # Encode video & text of mdmmt_max, different movie here (Titanic)
-    feat = vlm_api.encode_video(mid="Movies/114208744", scene_element=2, class_name='mdmmt_max')
+    feat = vlm_api.encode_video(mid="Movies/114206952", scene_element=1, class_name='mdmmt_max')
     print(f"MDMMT MAX movie embedding: {feat}")
     text_feat = vlm_api.encode_text(text, class_name='mdmmt_max')
     print(f"MDMMT MEAN text embedding: {text_feat}")
@@ -134,7 +124,7 @@ def main():
 
     print("/nEncoding video and text of MDMMT_MEAN")
     # Encode video & text of mdmmt_mean, different movie here (Titanic)
-    feat = vlm_api.encode_video(mid="Movies/114208744", scene_element=2, class_name='mdmmt_mean')
+    feat = vlm_api.encode_video(mid="Movies/114206952", scene_element=1, class_name='mdmmt_mean')
     print(f"MDMMT MEAN movie embedding: {feat}")
     text_feat = vlm_api.encode_text(text, class_name='mdmmt_mean')
     print(f"MDMMT MEAN text embedding: {text_feat}")
@@ -143,15 +133,18 @@ def main():
         print(score.item(), txt)
     print("----------------------")
 
-    print("/nEncoding video and text of MDMMT_LEGACY")
-    # Encode video & text of mdmmt_legacy, different movie here (Titanic)
-    feat = vlm_api.encode_video(mid="Movies/114208744", scene_element=2, class_name='mdmmt_legacy')
-    print(f"MDMMT MEAN movie embedding: {feat}")
-    text_feat = vlm_api.encode_text(text, class_name='mdmmt_legacy')
-    print(f"MDMMT MEAN text embedding: {text_feat}")
-    scores = torch.matmul(tembs, feat)
-    for txt, score in zip(text, scores):
-        print(score.item(), txt)
+   # Encode video & text of clip_rn
+    print("Encoding video and text of CLIP_RN")
+    vlm_api.encode_video(mid="Movies/114207205", scene_element=0, class_name='clip_rn')
+    text_feat = vlm_api.encode_text(text, class_name='clip_rn')
+    print(f"Length of CLIP_RN text embeddings: {len(text_feat)}")
+    print("----------------------")
+
+    print("/nEncoding video and text of CLIP_VIT")
+    # Encode video & text of clip_vit
+    vlm_api.encode_video(mid="Movies/114207205", scene_element=0, class_name='clip_vit')
+    text_feat = vlm_api.encode_text(text, class_name='clip_vit')
+    print(f"Length of CLIP_VIT text embeddings: {len(text_feat)}")
     print("----------------------")
 
 
