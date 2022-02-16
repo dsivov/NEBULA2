@@ -143,8 +143,9 @@ def test_batch_sentences(input_txt : List[str], weights_path : str):
                 preds.append(pred_flat)
                 prob.append(float(max(cur_prob[0])))
     
-    print('========== RESULTS ==========\n')
+    # print('========== RESULTS ==========\n')
     output = []
+    output_path = "./bart/sentence_correctness_classifier/Output_predictions.txt"
     print_table = [['ID', 'Input', 'Output', 'Probability']]
     for idx, pred in enumerate(preds):
         print_table.append([str(idx), input_txt[idx], str(pred), str(prob[idx])])
@@ -155,12 +156,8 @@ def test_batch_sentences(input_txt : List[str], weights_path : str):
         row = "".join(element.ljust(column_width + 1)  for element in row)
         output.append(row)
         # print(row)
-    # np.savetxt('./bart/sentence_correctness_classifier/Output1.txt', output, fmt='%s')
-    with open("./bart/sentence_correctness_classifier/Output_predictions.txt.txt", "w") as text_file:
-        for row in print_table:
-            row = "".join(element.ljust(column_width + 1)  for element in row)
-            text_file.write(row + '\n')
-
+    np.savetxt(output_path, output, fmt='%s')
+    print(f"Sucessful! Saved output results to {output_path}")
     # for idx, pred in enumerate(preds):
     #     print("Sentence ")
     #     print(f'Sentence: {input_txt[idx]}, Prediction: {pred}')
