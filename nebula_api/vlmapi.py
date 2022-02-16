@@ -16,13 +16,20 @@ from nebula_api.clip_api import CLIP_API
 from vcomet.vcomet import VCOMET_KG
 
 class VLM_API:
-    def __init__(self):
-        self.clip_vit = CLIP_API('vit')
-        self.clip_rn = CLIP_API('rn')
+    def __init__(self, model_name='mdmmt_max'):
+        self.available_class_names = ['clip_vit', 'clip_rn', 'mdmmt_max', 'mdmmt_mean', 'mdmmt_legacy']
+        if model_name not in self.available_class_names:
+            raise Exception(f"Model name invalid. Use one of these names: {self.available_class_names}")
+        if model_name == "clip_vit":
+            self.clip_vit = CLIP_API('vit')
+        elif model_name == "clip_rn":
+            self.clip_rn = CLIP_API('rn')
+        elif model_name == "mdmmt_max" or \
+                model_name == "mdmmt_mean" or \
+                    model_name == "mdmmt_legacy":
+            self.mdmmt_api = MDMMT_API()
         self.vcomet = VCOMET_KG()
         self.remote_api = RemoteAPIUtility()
-        self.mdmmt_api = MDMMT_API()
-        self.available_class_names = ['clip_vit', 'clip_rn', 'mdmmt_max', 'mdmmt_mean', 'mdmmt_legacy']
         print(f"Available class names: {self.available_class_names}")
     
     def download_and_get_minfo(self, mid, to_print=False):
@@ -100,59 +107,56 @@ class VLM_API:
 
 
 def main():
-    vlm_api = VLM_API()
+    vlm_mdmmt_max = VLM_API(model_name="mdmmt_max")
+    # vlm_mdmmt_mean = VLM_API(model_name="mdmmt_mean")
+    # vlm_mdmmt_legacy = VLM_API(model_name="mdmmt_legacy")
+    # vlm_clup_vit = VLM_API(model_name="clip_vit")
+    # vlm_clip_rn = VLM_API(model_name="clip_rn")
 
-    text = ['hand',
-            'picture of a hand'
-        ]
-
-    # Encode video & text of clip_rn
-    print("Encoding video and text of CLIP_RN")
-    vlm_api.encode_video(mid="Movies/114207205", scene_element=0, class_name='clip_rn')
-    text_feat = vlm_api.encode_text(text, class_name='clip_rn')
-    print(f"Length of CLIP_RN text embeddings: {len(text_feat)}")
-    print("----------------------")
-
-    print("/nEncoding video and text of CLIP_VIT")
-    # Encode video & text of clip_vit
-    vlm_api.encode_video(mid="Movies/114207205", scene_element=0, class_name='clip_vit')
-    text_feat = vlm_api.encode_text(text, class_name='clip_vit')
-    print(f"Length of CLIP_VIT text embeddings: {len(text_feat)}")
-    print("----------------------")
+    text = ['Dressed up men and women getting off a ship',
+            'Dressed up men and women',
+            'men and women',
+            'Vulcano abrupted while dressed up men and women getting off a ship',
+            'the thief was found when dressed up men and women getting off a ship',
+            'Dressed up men and women getting off a ship, mouse went by the door',
+            'Dressed up men and women getting off a ship and cat played with dog']
 
     print("/nEncoding video and text of MDMMT_MAX")
     # Encode video & text of mdmmt_max, different movie here (Titanic)
-    feat = vlm_api.encode_video(mid="Movies/114208744", scene_element=2, class_name='mdmmt_max')
+    feat = vlm_mdmmt_max.encode_video(mid="Movies/114206952", scene_element=1, class_name='mdmmt_max')
     print(f"MDMMT MAX movie embedding: {feat}")
-    text_feat = vlm_api.encode_text(text, class_name='mdmmt_max')
+    text_feat = vlm_mdmmt_max.encode_text(text, class_name='mdmmt_max')
     print(f"MDMMT MEAN text embedding: {text_feat}")
-    tembs = vlm_api.mdmmt_api.batch_encode_text(text)
+    tembs = vlm_mdmmt_max.mdmmt_api.batch_encode_text(text)
     scores = torch.matmul(tembs, feat)
     for txt, score in zip(text, scores):
         print(score.item(), txt)
     print("----------------------")
 
-    print("/nEncoding video and text of MDMMT_MEAN")
-    # Encode video & text of mdmmt_mean, different movie here (Titanic)
-    feat = vlm_api.encode_video(mid="Movies/114208744", scene_element=2, class_name='mdmmt_mean')
-    print(f"MDMMT MEAN movie embedding: {feat}")
-    text_feat = vlm_api.encode_text(text, class_name='mdmmt_mean')
-    print(f"MDMMT MEAN text embedding: {text_feat}")
-    scores = torch.matmul(tembs, feat)
-    for txt, score in zip(text, scores):
-        print(score.item(), txt)
-    print("----------------------")
+#     print("/nEncoding video and text of MDMMT_MEAN")
+#     # Encode video & text of mdmmt_mean, different movie here (Titanic)
+#     feat = vlm_mdmmt_mean.encode_video(mid="Movies/114206952", scene_element=1, class_name='mdmmt_mean')
+#     print(f"MDMMT MEAN movie embedding: {feat}")
+#     text_feat = vlm_mdmmt_mean.encode_text(text, class_name='mdmmt_mean')
+#     print(f"MDMMT MEAN text embedding: {text_feat}")
+#     scores = torch.matmul(tembs, feat)
+#     for txt, score in zip(text, scores):
+#         print(score.item(), txt)
+#     print("----------------------")
 
-    print("/nEncoding video and text of MDMMT_LEGACY")
-    # Encode video & text of mdmmt_legacy, different movie here (Titanic)
-    feat = vlm_api.encode_video(mid="Movies/114208744", scene_element=2, class_name='mdmmt_legacy')
-    print(f"MDMMT MEAN movie embedding: {feat}")
-    text_feat = vlm_api.encode_text(text, class_name='mdmmt_legacy')
-    print(f"MDMMT MEAN text embedding: {text_feat}")
-    scores = torch.matmul(tembs, feat)
-    for txt, score in zip(text, scores):
-        print(score.item(), txt)
-    print("----------------------")
+#    # Encode video & text of clip_rn
+#     print("Encoding video and text of CLIP_RN")
+#     vlm_clip_rn.encode_video(mid="Movies/114207205", scene_element=0, class_name='clip_rn')
+#     text_feat = vlm_clip_rn.encode_text(text, class_name='clip_rn')
+#     print(f"Length of CLIP_RN text embeddings: {len(text_feat)}")
+#     print("----------------------")
+
+#     print("/nEncoding video and text of CLIP_VIT")
+#     # Encode video & text of clip_vit
+#     vlm_clup_vit.encode_video(mid="Movies/114207205", scene_element=0, class_name='clip_vit')
+#     text_feat = vlm_clup_vit.encode_text(text, class_name='clip_vit')
+#     print(f"Length of CLIP_VIT text embeddings: {len(text_feat)}")
+#     print("----------------------")
 
 
 if __name__ == "__main__":
