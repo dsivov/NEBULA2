@@ -47,23 +47,27 @@ class BART:
 
         
         result = np.prod(cond_probs)
+        norm_result = result**(1./len(input_txt.split(" ")))
         if to_print:
-            print(f'Input Text: {input_txt} , Result: {result}')
+            print(f'Input Text: {input_txt} , Result: {norm_result}')
         return result
 
 
 if __name__ == "__main__":
     input_txt_valid = 'white v-neck shirt'
-    input_txt_invalid = 'white v-neck table'
 
-    bart = BART()
-    print("Scoring when all the sentence is given and mask is moved to right: ")
-    bart.generate_score_on_str(input_txt_valid, to_print=True)
-    bart.generate_score_on_str(input_txt_invalid, to_print=True)
+    with open('./bart/sentence_correctness_classifier/annotated_sentences.txt') as f:
+        input_txt = [line.rstrip('\n').rstrip().lstrip().replace(',', '').replace('\'','').replace('\xa0', '') for line in f]
+        input_txt = [x for x in input_txt if x != '']
 
-    print("Scoring when only the previous word are given: ")
-    bart.generate_score_on_mask(input_txt_valid, to_print=True)
-    bart.generate_score_on_mask(input_txt_invalid, to_print=True)
+        bart = BART()
+        print("Scoring when all the sentence is given and mask is moved to right: ")
+        for input in input_txt:
+            bart.generate_score_on_str(input, to_print=True)
+
+    # print("Scoring when only the previous word are given: ")
+    # bart.generate_score_on_mask(input_txt_valid, to_print=True)
+    # bart.generate_score_on_mask(input_txt_invalid, to_print=True)
 
 
 
