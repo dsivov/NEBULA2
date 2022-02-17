@@ -26,6 +26,7 @@ def print_results(tokenizer_gpt, model_gpt, path):
 def main():
     ann_sen_path = './bart/sentence_correctness_classifier/annotated_sentences.txt'
     gen_sen_path = './bart/sentence_correctness_classifier/generated_sentences.txt'
+    cs_sen_path = './bart/sentence_correctness_classifier/cs_test_sentences.txt'
     model_name = 'gpt2'
     if model_name == 'openai-gpt':
         model_gpt = OpenAIGPTLMHeadModel.from_pretrained('openai-gpt')
@@ -33,6 +34,7 @@ def main():
         tokenizer_gpt = OpenAIGPTTokenizer.from_pretrained('openai-gpt')
         print_results(tokenizer_gpt, model_gpt, ann_sen_path)
         print_results(tokenizer_gpt, model_gpt, gen_sen_path)
+        print_results(tokenizer_gpt, model_gpt, cs_sen_path)
 
     elif model_name == 'gpt2':
         model_gpt = GPT2LMHeadModel.from_pretrained('gpt2')
@@ -40,6 +42,7 @@ def main():
         tokenizer_gpt = GPT2Tokenizer.from_pretrained('gpt2')
         print_results(tokenizer_gpt, model_gpt, ann_sen_path)
         print_results(tokenizer_gpt, model_gpt, gen_sen_path)
+        print_results(tokenizer_gpt, model_gpt, cs_sen_path)
 
     
 
