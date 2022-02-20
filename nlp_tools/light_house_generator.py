@@ -2,10 +2,12 @@
 The class is used to generate new lighthouse sentences from existing ones
 """
 import amrlib
-import penman
+import time
 from nebula_api.atomic2020.comet_enrichment_api import Comet
-# from benchmark.clip_benchmark import NebulaVideoEvaluation
+from benchmark.clip_benchmark import NebulaVideoEvaluation
 import numpy as np
+from sklearn.preprocessing import normalize
+
 
 class AMRGenerator:
     def __init__(self):
@@ -48,21 +50,21 @@ class AMRGenerator:
 class LightHouseGenerator:
     def __init__(self, comet: Comet = None, stog = None, gtos = None):
         if comet == None:
-            # self.comet = Comet("/home/migakol/data/comet/comet-atomic_2020_BART")
-            self.comet = Comet("/home/gil/dev/NEBULA2/nebula_api/atomic2020/comet-atomic_2020_BART")
+            self.comet = Comet("/home/migakol/data/comet/comet-atomic_2020_BART")
+            # self.comet = Comet("/home/gil/dev/NEBULA2/nebula_api/atomic2020/comet-atomic_2020_BART")
         else:
             self.comet = comet
         # The default subjects are the most widespread subjects and we check them regardless of other concepts
         self.default_subjects = ['man', 'woman', 'boy', 'girl', 'guy', 'crowd', 'people']
 
         if stog == None:
-            self.stog = amrlib.load_stog_model()
-            # self.stog = amrlib.load_stog_model(model_dir='/home/migakol/data/amrlib/model_stog')
+            # self.stog = amrlib.load_stog_model()
+            self.stog = amrlib.load_stog_model(model_dir='/home/migakol/data/amrlib/model_stog')
         else:
             self.stog = stog
         if gtos == None:
-            # self.gtos = amrlib.load_gtos_model(model_dir='/home/migakol/data/amrlib/model_gtos')
-            self.gtos = amrlib.load_gtos_model()
+            self.gtos = amrlib.load_gtos_model(model_dir='/home/migakol/data/amrlib/model_gtos')
+            # self.gtos = amrlib.load_gtos_model()
         else:
             self.gtos = gtos
 
@@ -78,13 +80,29 @@ class LightHouseGenerator:
         :param emb:
         :return:
         """
+        start = time.time()
         concepts = self.comet.get_concepts(events, places)
+        new_concepts, new_dicts = self.comet.get_concepts2(events, places)
+        end = time.time()
+        print('Concept generation ', end - start)
         # concepts = self.comet.get_groundings(events, places, 'concepts')
+        start = time.time()
         attributes = self.comet.get_groundings(events, places, 'attributes')
+        end = time.time()
+        print('Attribute generation ', end - start)
+        start = time.time()
         persons = self.comet.get_groundings(events, places, 'person', 'somebody')
+        end = time.time()
+        print('Person generation ', end - start)
+        start = time.time()
         triplets = self.comet.get_groundings(events, places, 'triplet')
+        end = time.time()
+        print('Triplet generation ', end - start)
+        start = time.time()
         verbs = self.comet.get_verbs(events)
-        return concepts, attributes, persons, triplets, verbs
+        end = time.time()
+        print('Verb generation ', end - start)
+        return concepts, attributes, persons, triplets, verbs, new_concepts, new_dicts
 
     def generate_from_concepts(self, concepts: list, attributes: list, persons: list, triplets: list, verbs: list,
                                places: list, emb, mode='generate_amrs'):
@@ -148,24 +166,32 @@ class LightHouseGenerator:
             return res_grpahs
 
         elif mode == 'generate_and_test':
+            clip = NebulaVideoEvaluation()
             for c1 in self.default_subjects:
                 for c2 in concepts:
                     for v in verbs:
                         for p in places:
                             for a1 in attributes:
+                                sent_array = []
                                 for a2 in attributes:
                                     sent = a1 + ' ' + c1 + ' ' + v + ' ' + a2 + ' ' + c2 + ' ' + p
                                     if len(sent) > 320:
                                         sent = sent[0:320]
-                                    sent_emb = self.clip_bench.encode_text(sent)
-                                    sent_emb = sent_emb / np.linalg.norm(sent_emb)
-                                    res = np.sum((emb * sent_emb))
+                                    sent_array.append(sent)
+                                sent_emb = clip.encode_text(sent_array)
+                                sent_emb = normalize(sent_emb, axis=0, norm='l2')
+                                res = np.matmul(sent_emb, emb.reshape(640, 1))
 
-                                    if res > best_res:
-                                        best_res = res
-                                        best_sent = sent
+                                if np.max(res) > best_res:
+                                    best_res = np.max(res)
+                                    best_sent = sent_array[np.argmax(res)]
 
-            return best_sent, best_res
+        elif mode == 'triplets':
+            for triplet in triplets:
+                pass
+
+
+        return best_sent, best_res
 
 if __name__ == '__main__':
     print('Start generatiion')

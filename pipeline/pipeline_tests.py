@@ -14,6 +14,10 @@ from pipeline.clip_cap import ClipCap
 from nebula_api.milvus_api import connect_db
 from nebula_api.milvus_api import MilvusAPI
 
+from nebula_api.atomic2020.comet_enrichment_api import Comet
+
+import time
+
 
 class LSMDCSmallDataset:
     def __init__(self, db):
@@ -457,7 +461,10 @@ def save_lighthouse_components():
         # if movie['path'] != '1015_27_Dresses/1015_27_Dresses_00.38.02.757-00.38.08.213.avi':
         #     continue
 
+        start = time.time()
         light_house = get_lighthouse_for_movie(movie_name)
+        end = time.time()
+        print('Get lighthouses ', end - start)
 
         embedding_list, boundaries = clip_bench.create_clip_representation(movie_name, thresholds=thresholds,
                                                                            method='single')
@@ -472,12 +479,15 @@ def save_lighthouse_components():
             actions = [ac[1][0] for ac in light_house[k]['actions']]
             places = [pl[1] for pl in light_house[k]['places']]
             # Find the relevant lighthouses in the database
-            concepts, attributes, persons, triplets, verbs = lh_gen.decompose_lighthouse(events=events, actions=actions,
-                                                                                  places=places)
+            start = time.time()
+            concepts, attributes, persons, triplets, verbs, all_concept, all_dicts = lh_gen.decompose_lighthouse(
+                events=events, actions=actions, places=places)
+            end = time.time()
+            print('Lighthouse decompose ', end - start)
             # Save the data to save time
             save_name = f'/home/migakol/data/amr_tests/' + movie_name.split('/')[-1][0:-4] + f'_emb_{k:03d}.pkl'
             f = open(save_name, 'wb')
-            pickle.dump([concepts, attributes, persons, triplets, verbs], f)
+            pickle.dump([concepts, attributes, persons, triplets, verbs, all_concept, all_dicts], f)
 
 
 def cluster_words(glove_model, concepts):
@@ -523,7 +533,7 @@ def format_lighthouses(glove_model, concepts, attributes, persons, triplets):
         new_triplets = new_triplets + triplets[k]
 
     # Go over all concepts
-    cluster_words(glove_model, new_concepts)
+    # cluster_words(glove_model, new_concepts)
 
     return list(set(new_concepts)), list(set(new_attributes)), list(set(new_persons)), list(set(new_triplets))
 
@@ -572,7 +582,11 @@ def generate_sentences_from_lighthouse():
 
             clip_cap_emb = low_res_clip_bench.get_leg_representaion(movie_name, boundaries[0][k], method='single')
             clip_cap_text = clip_cap.generate_text(clip_cap_emb)
+            clipcap_emb = clip_bench.encode_text(clip_cap_text)
+            clipcap_emb = clipcap_emb / np.linalg.norm(clipcap_emb)
             emb = emb / np.linalg.norm(emb)
+            clip_cap_res = np.matmul(clipcap_emb, emb)
+            print('Clip cap res ', clip_cap_text, ' ', clip_cap_res)
 
             events = [ev[1][0] for ev in light_house[k]['events']]
             actions = [ac[1][0] for ac in light_house[k]['actions']]
@@ -598,17 +612,104 @@ def generate_sentences_from_lighthouse():
             # Load the saved data
             load_name = f'/home/migakol/data/amr_tests/' + movie_name.split('/')[-1][0:-4] + f'_emb_{k:03d}.pkl'
             f = open(load_name, 'rb')
-            concepts, attributes, persons, triplets, verbs = pickle.load(f)
+            concepts, attributes, persons, triplets, verbs, all_concept, all_dicts = pickle.load(f)
             concepts, attributes, persons, triplets = format_lighthouses(glove_model, concepts, attributes, persons,
                                                                          triplets)
             best_sent, best_res = lh_gen.generate_from_concepts(concepts, attributes, persons, triplets, verbs,
-                                                                places, emb)
+                                                                places, emb, mode='generate_and_test')
 
             save_name = f'/home/migakol/data/amr_tests/res' + movie_name.split('/')[-1][0:-4] + f'_emb_{k:03d}.pkl'
             f = open(save_name, 'wb')
             pickle.dump([best_sent, best_res], f)
 
             pass
+
+
+def find_movie(dima_movie_name, movie_list):
+    for movie in movie_list:
+        pass
+        if movie['name'] in dima_movie_name:
+            sep = movie['path'].split('.')
+            dima_sep = dima_movie_name.split('.')[0].split('_')
+            if sep[-4] == dima_sep[-3] and sep[-3] == dima_sep[-2] and sep[-2] == dima_sep[-1]:
+                return movie['path']
+
+
+def fill_clip_dataset_with_lsmdc():
+    low_res_clip_bench = NebulaVideoEvaluation('ViT-B/32')
+    base_folder = '/dataset/lsmdc/avi/'
+
+    comet = Comet("/home/migakol/data/comet/comet-atomic_2020_BART")
+    movie_ids = comet.get_playground_movies()
+
+    clipcap_db = comet.db.collection('nebula_clipcap_lighthouse_lsmdc')
+    all_movies, all_ids = get_small_movies_ids()
+
+    # query_r = 'FOR doc IN nebula_clipcap_lighthouse_lsmdc RETURN doc'
+    # cursor_r = comet.db.aql.execute(query_r, ttl=3600)
+    # stages = []
+    # for stage in cursor_r:
+    #     stages.append(stage)
+
+    clip_cap = ClipCap()
+
+    for id in movie_ids:
+        print('Movie ', id)
+        stages = comet.get_stages(id)
+        for stage in stages:
+            boundary = (stage['start'], stage['stop'])
+            movie_names = stage['full_path'].split('/')
+            if movie_names[0] == '':
+                movie_name = stage['full_path'].split('/')[3]
+            else:
+                movie_name = stage['full_path'].split('/')[2]
+
+            movie_path = find_movie(movie_name, all_movies)
+            movie_full_path = base_folder + movie_path
+            clip_cap_emb = low_res_clip_bench.get_leg_representaion(movie_full_path, boundary, method='single')
+            clip_cap_text = clip_cap.generate_text(clip_cap_emb)
+
+            clipcap_db.insert({'arango_id': id, 'sentence': clip_cap_text, 'scene_element': stage['scene_element']})
+
+            pass
+        # benchmark_collection.insert({'index1': k, 'index2': m, 'sim_value': similarity_matrix[k, m]})
+
+        pass
+
+
+
+def fill_clipcap():
+    all_movies, all_ids = get_small_movies_ids()
+    thresholds = [0.8]
+    base_folder = '/dataset/lsmdc/avi/'
+    clip_bench = NebulaVideoEvaluation()
+    clip_cap = ClipCap()
+    low_res_clip_bench = NebulaVideoEvaluation('ViT-B/32')
+
+    for id in all_ids:
+        movie = all_movies[int(id['movie_id'])]
+        movie_name = base_folder + movie['path']
+        print(movie['path'])
+
+        embedding_list, boundaries = clip_bench.create_clip_representation(movie_name, thresholds=thresholds,
+                                                                           method='single')
+        # Go over all embeddings
+        for k in range(embedding_list[0].shape[0]):
+            emb = embedding_list[0][k, :]
+
+            load_name = f'/home/migakol/data/amr_tests/' + movie_name.split('/')[-1][0:-4] + f'_emb_{k:03d}.pkl'
+            if not os.path.isfile(load_name):
+                continue
+
+            clip_cap_emb = low_res_clip_bench.get_leg_representaion(movie_name, boundaries[0][k], method='single')
+            clip_cap_text = clip_cap.generate_text(clip_cap_emb)
+
+            f = open(load_name, 'rb')
+            loaded_data = pickle.load(f)
+            triplets = loaded_data[3]
+            print('Loaded')
+            # concepts, attributes, persons, triplets, verbs, all_concept, all_dicts = pickle.load(f)
+
 
 if __name__ == '__main__':
 
@@ -637,5 +738,7 @@ if __name__ == '__main__':
     # It is done, by decomposing the lighthouse into components
     # save_lighthouse_components()
     # part 2 - load the concepts and use them to generate permutations and compare them against CLIP
-    generate_sentences_from_lighthouse()
+    # generate_sentences_from_lighthouse()
+    # fill_clip_dataset_with_lsmdc()
 
+    fill_clipcap()
