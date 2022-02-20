@@ -138,3 +138,9 @@ ve/
 
 # IDE
 .vscode/
+
+.ckpt
+.pth
+nebula_api/mdmmt_api/models/CLIP
+nebula_api/mdmmt_api/models/tensorflow_models
+nebula_api/mdmmt_api/ckpts

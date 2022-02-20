@@ -16,7 +16,7 @@ from benchmark.clip_benchmark import NebulaVideoEvaluation
 import numpy as np
 from nebula_api.nebula_enrichment_api import NRE_API
 import glob
-import redis
+#import redis
 import boto3
 import json
 import csv
@@ -29,9 +29,9 @@ class NEBULA_SCENE_DETECTOR():
         self.video_eval = NebulaVideoEvaluation()
         self.nre = NRE_API()
         self.db = self.nre.db
-        self.redis_cfg = {'host': 'mainnode', 'port': 6379}
-        self.redis = redis.Redis(
-            host=self.redis_cfg['host'], port=self.redis_cfg['port'], db=0)
+        # self.redis_cfg = {'host': 'mainnode', 'port': 6379}
+        # self.redis = redis.Redis(
+        #     host=self.redis_cfg['host'], port=self.redis_cfg['port'], db=0)
         self.s3 = boto3.client('s3', region_name='eu-central-1')
 
     # def init_new_db(self, dbname):
