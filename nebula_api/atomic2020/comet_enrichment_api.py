@@ -33,6 +33,7 @@ class Comet:
         # self.stog = amrlib.load_stog_model()
         # self.gtos = amrlib.load_gtos_model()
         print("model loaded")
+
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
         task = "summarization"
         use_task_specific_params(self.model, task)
@@ -212,6 +213,35 @@ class Comet:
             lh_concepts_map[concept] = concepts_map
         return(lh_concepts_map)
 
+    def get_concepts2(self, events, places):
+        concepts = self.get_groundings(events, places, type='concepts')
+        all_concepts = []
+        for concept in concepts.values():
+            for cn in concept:
+                if 'PersonX' in cn:
+                    continue
+                if cn == ' ':
+                    cn = cn[1:]
+                all_concepts.append(cn)
+                # for w in cn.split():
+                #     if w == 'a' or w == 'the':
+                #         continue
+                #     all_concepts = all_concepts + self.canon.get_concept_from_entity(w)
+        all_concepts = list(set(all_concepts))
+
+        # Now create a dictionary
+        all_dict = dict()
+        for concept in all_concepts:
+            for w in concept.split():
+                if w == 'a' or w == 'the':
+                    continue
+                if w not in all_dict.keys():
+                    all_dict[w] = self.canon.get_concept_from_entity(w)
+
+        return all_concepts, all_dict
+
+
+
     def get_verbs(self, lighthouses):
         relations = self.person_relations
         num_generate = 5
@@ -324,7 +354,7 @@ class Comet:
             #input()
         #groundings = list(dict.fromkeys(groundings))
         return(groundings_map)
-        
+
     def get_playground_movies(self):
         return(['Movies/114206816', 'Movies/114206849', 'Movies/114206892', 'Movies/114206952', 'Movies/114206999', 'Movies/114207139', 'Movies/114207205', 'Movies/114207240', 'Movies/114207265', 'Movies/114207324', 'Movies/114207361', 'Movies/114207398', 'Movies/114207441', 'Movies/114207474', 'Movies/114207499', 'Movies/114207550', 'Movies/114207668', 'Movies/114207740', 'Movies/114207781', 'Movies/114207810', 'Movies/114207839', 'Movies/114207908', 'Movies/114207953', 'Movies/114207984', 'Movies/114208064', 'Movies/114208149', 'Movies/114208196', 'Movies/114208338', 'Movies/114208367', 'Movies/114208576', 'Movies/114208637', 'Movies/114208744', 'Movies/114208777', 'Movies/114208820', 'Movies/114206358', 'Movies/114206264', 'Movies/114206337', 'Movies/114206397', 'Movies/114206632', 'Movies/114206597', 'Movies/114206691', 'Movies/114206789', 'Movies/114207184', 'Movies/114206548'])
         
