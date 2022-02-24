@@ -85,7 +85,7 @@ class CANON_API:
                 else:
                     return('abstraction')
                 while abstract.name() != root:
-                    print(syn.name())
+                    #print(syn.name())
                     if syn.name() == 'location.n.01' or syn.name() == 'area.n.05' or \
                         syn.name() == 'room.n.01' or syn.name() == 'road.n.01' or syn.name() == 'forest.n.02':
                         return('location')

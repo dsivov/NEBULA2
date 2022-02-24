@@ -1,0 +1,226 @@
+movie_id,stage,Text,Quality
+,,,
+"Quality: 3-Best, 2-Middle, 1-Bad",,,
+,,,
+,,,
+,,,
+,,,
+#Movie 1: Off the ship,,,
+Movies/114206952,0,  Dressed up men and women walking away in the evening  ,3
+Movies/114206952,0,  Elegantly dressed crowd walking away at night  ,3
+Movies/114206952,0,  A few men and women getting out of a wooden door in front of metal scaffolds  ,3
+Movies/114206952,0,  A few persons getting out of the door in the morning  ,2
+Movies/114206952,0,  An elegant bunch of people standing  ,2
+Movies/114206952,0,  A group of men and women in a room  ,2
+Movies/114206952,0,  A soldier running away on a battlefield  ,1
+Movies/114206952,0,  Many athletes running towards the finish line  ,1
+Movies/114206952,0,  Animals in the zoo  ,1
+Movies/114206952,0,  A crying baby at night  ,1
+,,    ,
+Movies/114206952,1,  Dressed up men and women getting off a ship  ,3
+Movies/114206952,1,  Elegantly dressed crowd walking away at night  ,2
+Movies/114206952,1,  Men in suits and bow ties and dressed up ladies unboarding a ship  ,3
+Movies/114206952,1,  An elegant crowd disembarking a ship with the skipper in the background  ,3
+Movies/114206952,1,  A couple holding hands on the bridge at night  ,2
+Movies/114206952,1,  A single well-dressed man walks away from a boat  ,2
+Movies/114206952,1,  A lady in a swimsuit poses to the camera  ,1
+Movies/114206952,1,  A frightened crowd of poor people running away in fear  ,1
+Movies/114206952,1,  An elephant in the jungle  ,1
+Movies/114206952,1,  A lion chases a cat in the street  ,1
+,,    ,
+Movies/114206952,2,  Dressed up men and women getting off a mid-size steamboat on a dock  ,3
+Movies/114206952,2,  Elegantly dressed couples unboarding a nice steamboat on a lighted dock at night  ,3
+Movies/114206952,2,  A mid-size steamboat with lifesavers is docking next to a lighted dock and elegant people are unboarding at night  ,3
+Movies/114206952,2,  Elegantly dressed crowd walking away at night  ,2
+Movies/114206952,2,  A couple holding hands on the bridge at night  ,2
+Movies/114206952,2,  A single well-dressed man walks away from a boat  ,2
+Movies/114206952,2,  A frightened crowd of poor people running away in fear  ,1
+Movies/114206952,2,  An elephant in the jungle  ,1
+Movies/114206952,2,  A lion chases a cat in the street  ,1
+Movies/114206952,2,  A boy plays with a ball  ,1
+,,    ,
+Movies/114206952,3,  A blonde receptionist hands-off pamphlets to a group of elegantly dressed men and women  ,3
+Movies/114206952,3,  A group of people queueing up in front of a reception desk  ,3
+Movies/114206952,3,  A group of men and women get papers from a blond clerk in a travel reception desk  ,3
+Movies/114206952,3,  Men in suits and dressed up ladies line up in front of a reception desk where a lady receptionist hands over some documents  ,3
+Movies/114206952,3,  A lady buys a newspaper  ,2
+Movies/114206952,3,  A man stands in line to get tickets in a hall  ,2
+Movies/114206952,3,  A frightened crowd of poor people running away in fear  ,1
+Movies/114206952,3,  An elephant in the jungle  ,1
+Movies/114206952,3,  A lion chases a cat in the street  ,1
+Movies/114206952,3,  A boy plays with a ball  ,1
+,,    ,
+#Movie 2: Renaissance scene,,    ,
+Movies/114207324,0,"  A nobleman looks up at the entrance to a room full of people, next to a window with a vase of flowers in a renaissance scene  ",3
+Movies/114207324,0,  A grey-haired renaissance man at the entrance to a hall next to flowers  ,3
+Movies/114207324,0,  A pony-tailed renaissance nobleman looks up and sideways at the door of a hall while people are getting in  ,3
+Movies/114207324,0,  A renaissance man stands next to an armed guard at the doorway next to a vase with flowers on a window  ,3
+Movies/114207324,0,"  At a wooden doorstep, stands a renaissance nobleman with a grey pony-tail, looking up, next to flowers, window, and candle holder, while people are getting in  ",3
+Movies/114207324,0,  A man looking up next to a candle holder  ,2
+Movies/114207324,0,"  Next to a window, a vase with flowers and a fancy candle holder stands a person with a ponytail  ",2
+Movies/114207324,0,"  A person looks up, while 3 pony-tailed renaissance men are getting into the hall  ",3
+Movies/114207324,0,  A person looks up at the doorstep next to flowers  ,2
+Movies/114207324,0,  A lady runs away  ,1
+,,    ,
+,,    ,
+# Movie 3: Lord of the Rings,,    ,
+Movies/114207908,0,  A blue-eyed bearded warrior with a metal helmet and shield puts his arm on a blonde lady with 3 armed soldiers in the background  ,3
+Movies/114207908,0,"  A crowned knight puts his left arm on the shoulder of a blonde lady facing away, with three soldiers with helmets, shields, and spears in the background  ",3
+Movies/114207908,0,  A bearded knight puts his arm on the shoulder of a lady  ,3
+Movies/114207908,0,  Three soldiers with weapons watch a knight who puts his arm on the shoulder of a blond lady shown from behind  ,3
+Movies/114207908,0,  A warrior watches behind the shoulder of a lady while he puts his arm on her shoulder  ,3
+Movies/114207908,0,  A knight embraces a lady in front of warriors  ,2
+Movies/114207908,0,  A couple embracing on the battlefield  ,2
+Movies/114207908,0,  A queen and a king looking at each other  ,2
+Movies/114207908,0,  A singer sings the blues  ,1
+Movies/114207908,0,  A horse in the desert  ,1
+,,    ,
+Movies/114207908,1,"  Two Elves are looking forward to making room for a third Elf from behind, with a flag with a tree in the background  ",3
+Movies/114207908,1,"  Three men with very long hair dressed up in white with a cloth banner depicting a tree, in the background  ",3
+Movies/114207908,1,"  Two men at the front and a third man at the back, all with very long hair and jewelry gaze forward  ",3
+Movies/114207908,1,  Two princes and a king face forward  ,2
+Movies/114207908,1,  Men around a cloth banner of tree  ,2
+Movies/114207908,1,  Men with very long hair and crowns gaze forward  ,2
+Movies/114207908,1,  Three men are looking forward  ,2
+Movies/114207908,1,  A tree in the rain  ,1
+Movies/114207908,1,  A ship in the sea  ,1
+Movies/114207908,1,  A horse in the desert  ,1
+,,    ,
+#Movie 4: Only the last (long) scene element,,    ,
+Movies/114208149,2,"  A US Coastal Guard boat cruises fast, with staff wearing life-jackets underneath a bridge with high-rises in the background  ",3
+Movies/114208149,2,  A motorboat speeds underneath a bridge with staff wearing life-jackets  ,3
+Movies/114208149,2,  A police boat sails very fast in a city waterway  ,3
+Movies/114208149,2,  A small police boat sails underneath a tall bridge with high-rises in the background  ,3
+Movies/114208149,2,  Motorboat sails fast  ,2
+Movies/114208149,2,  A police boat passes under a bridge  ,2
+Movies/114208149,2,  A boat sails in the city  ,2
+Movies/114208149,2,  I like cookies  ,1
+Movies/114208149,2,  A policeman rides a horse fast  ,1
+Movies/114208149,2,  A horse in the desert  ,1
+,,    ,
+# Movie 5: The red-headed lady,,    ,
+Movies/114208196,0,  Two hands with long nails hold a pack of credit cards  ,3
+Movies/114208196,0,  A lady holds a credit card  ,3
+Movies/114208196,0,  Someone holds a golden credit card  ,3
+Movies/114208196,0,  A pack of credit cards is held by two hands with long nails  ,3
+Movies/114208196,0,  A credit card  ,2
+Movies/114208196,0,  Gold card  ,2
+Movies/114208196,0,  Cache card  ,2
+Movies/114208196,0,  Plastic card  ,2
+Movies/114208196,0,  A race car  ,1
+Movies/114208196,0,  Nails  ,1
+,,    ,
+Movies/114208196,1,  A plump red-headed lady with a blue robe and a pink towel on her shoulder turns away  ,3
+Movies/114208196,1,"  A red-headed lady at the front of a wall with a painting of a lady, a night lamp, and a printer  ",3
+Movies/114208196,1,  A lady with a blue robe and a pink towel turns  ,3
+Movies/114208196,1,  A lady with a robe in front of a printer in a room  ,3
+Movies/114208196,1,  A lady in front of a standing lamp  ,2
+Movies/114208196,1,  A lady after a shower in front of a picture of a lady  ,2
+Movies/114208196,1,"  A lady in front of a wall with a picture, a standing lamp, and a printer  ",2
+Movies/114208196,1,  A racecar  ,1
+Movies/114208196,1,  A man in a room  ,1
+Movies/114208196,1,  A crowd in a hall  ,1
+,,    ,
+#Movie 6: Black man ,,    ,
+Movies/114208338,0,"  A black person with a hat, suit, and tie looks to his sides, takes a notebook out of the pocket of his suit, reads it, and abruptly gets up from a bench in a garden  ",3
+Movies/114208338,0,"  A young man with a mustache and a hat sits on a bench between the trees, reads from his book, and gets up  ",3
+Movies/114208338,0,  A person sits on a bench in a garden and takes out a book from his inner pocket and jumps up  ,3
+Movies/114208338,0,  A young male takes out a booklet from his pocket and goes away  ,3
+Movies/114208338,0,  A lady pulls something from her purse and puts makeup in the garden  ,2
+Movies/114208338,0,  A child takes a handkerchief out of his pocket and goes away to the trees  ,2
+Movies/114208338,0,"  Between the trees, on a bench, a young lady with a mustache sits, alone  ",2
+Movies/114208338,0,"  In the office, a clerk speaks on the phone  ",1
+Movies/114208338,0,  A crowd is singing in the rain  ,1
+Movies/114208338,0,  A dolphin plays soccer in the pool  ,1
+,,    ,
+"#Movie 7: Snow on the house. A second scene element is not detected, and is not described below",,    ,
+Movies/114208576,0,  Snow calmly falls on a big castle house with lit windows at night  ,3
+Movies/114208576,0,"  A two-story castle with a balcony and a smoking chimney, at night, while snow falls smoothly  ",3
+Movies/114208576,0,  Snow falls at night on a castle  ,3
+Movies/114208576,0,  Snow falls smoothly on a castle with a smoking chimney and lit windows  ,3
+Movies/114208576,0,  A house in the dark  ,2
+Movies/114208576,0,  Smoking chimney  ,2
+Movies/114208576,0,  Snow at night  ,2
+Movies/114208576,0,  A house with lit windows  ,2
+Movies/114208576,0,  A horse in the desert  ,1
+Movies/114208576,0,  A ship in the sea  ,1
+,,    ,
+#Movie 8: Titanic,,    ,
+Movies/114208744,0,"  A red-headed young lady stands behind the rails of a ship, and a young man stands behind her trying to help out  ",3
+Movies/114208744,0,  A lady wants to jump from the boat at night while a young man extends his hand to help her  ,3
+Movies/114208744,0,  A man on the deck extends a hand to a lady who wants to jump into the water on a boat  ,3
+Movies/114208744,0,  A man offers his hand to help a lady who stands behind the rails on a ship deck trying to jump to the water  ,3
+Movies/114208744,0,  A man and a woman at night  ,2
+Movies/114208744,0,  A man helps a lady on a deck of a ship  ,2
+Movies/114208744,0,  A young couple on the deck of a cruise ship  ,2
+Movies/114208744,0,  A man loves a lady  ,2
+Movies/114208744,0,  A lighthouse in the dark  ,1
+Movies/114208744,0,  An airplane in the sky  ,1
+,,    ,
+Movies/114208744,1,  A man with a long-sleeved shirt comes from behind to offer help to a red-headed lady on a deck of a ship  ,3
+Movies/114208744,1,  A man extends his hand from behind to a woman who stands on a deck of a ship with a lamp in the background  ,3
+Movies/114208744,1,  A man leans and extends his hand towards a red-headed woman with earrings and a dress  ,3
+Movies/114208744,1,  A couple on a deck of a ship with a big lamp and a pole with a rope behind  ,3
+Movies/114208744,1,  A man wants to help a woman  ,2
+Movies/114208744,1,  Give me your hand  ,2
+Movies/114208744,1,  He wants to help her  ,2
+Movies/114208744,1,  A couple  ,2
+Movies/114208744,1,  A horse grazes in the sun  ,1
+Movies/114208744,1,  A blind man irons his shirt  ,1
+,,    ,
+Movies/114208744,2,  A hand is reached out from the right and another hand appears from the left for a handshake  ,3
+Movies/114208744,2,  A hand is extended and another hand reaches to hold it  ,3
+Movies/114208744,2,  Two hands slowly shake  ,3
+Movies/114208744,2,  Two hands shake in the dark  ,3
+Movies/114208744,2,  A man's hand is extended and a woman's hand reaches out for a handshake  ,3
+Movies/114208744,2,  Give me your hand  ,2
+Movies/114208744,2,  A handshake  ,2
+Movies/114208744,2,  Human arms  ,2
+Movies/114208744,2,  Two dogs fight  ,1
+Movies/114208744,2,  Two legs  ,1
+,,    ,
+"#Movie 9: Lady with white V-Neck. Only stage 0, 1 makes sense",,    ,
+Movies/114206337,0,  A lady with a white V-neck shirt and a jacket stands in a room with the main door behind her and then turns to leave  ,3
+Movies/114206337,0,  A blonde lady with a pony-tail and a jacket turns to pick her bag and leave the room through the main door  ,3
+Movies/114206337,0,  A lady thinks for a while standing in a room and then turns to leave through the main door behind her  ,3
+Movies/114206337,0,  A woman leaves home  ,2
+Movies/114206337,0,  A lady with a white shirt and a dark jacket in a room  ,3
+Movies/114206337,0,  A woman in a room with a door  ,2
+Movies/114206337,0,  A nice looking lady thinks  ,2
+Movies/114206337,0,  A woman makes a decision and leaves the room  ,2
+Movies/114206337,0,  A crowd in the stadium  ,1
+Movies/114206337,0,  A man enters a taxi  ,1
+,,    ,
+Movies/114206337,1,  A lady picks her bag and turns to leave the room with a refrigerator and vases with flowers  ,3
+Movies/114206337,1,  A blonde lady with a pony-tail and a jacket leaves a room with black and white tiles  ,3
+Movies/114206337,1,  A woman picks her stuff and leaves home  ,2
+Movies/114206337,1,  A blond woman with a pony-tail and with dark pants and a jacket picks her stuff to leave the apartment  ,3
+Movies/114206337,1,  A woman turns to the door to leave  ,2
+Movies/114206337,1,  A woman leaves the room through a white door  ,2
+Movies/114206337,1,  A woman goes out  ,2
+Movies/114206337,1,  A woman leaves home  ,2
+Movies/114206337,1,  A crowd in the stadium  ,1
+Movies/114206337,1,  A man enters a taxi  ,1
+,,    ,
+"#Movie 10: Lady drives a car at night, only scene element 0, 1 makes sense",,    ,
+Movies/114206548,0,  An SUV drives on a street in the suburb at night with its headlights on and its pouring rain  ,3
+Movies/114206548,0,  A car is driving in the street at night in the rain  ,3
+Movies/114206548,0,  A minivan with headlights on is driving in the rain  ,3
+Movies/114206548,0,  A car with headlights  ,2
+Movies/114206548,0,  A car at night and rain  ,2
+Movies/114206548,0,  A car driving in the street  ,2
+Movies/114206548,0,  Raining at night  ,2
+Movies/114206548,0,  Driving in the rain  ,2
+Movies/114206548,0,  Zebra in the meadows  ,1
+Movies/114206548,0,  On the sunny beach  ,1
+,,    ,
+Movies/114206548,1,"  A blonde lady with a short haircut drives a car at night while it is raining; she holds the steering wheel and says: ""I refuse to be a victim""  ",3
+Movies/114206548,1,  It is raining hard at night and a lady dressed in red drives a car and murmurs to herself  ,3
+Movies/114206548,1,"  The windshield wipers are on, it is pouring rain at night, a lady in red with earrings is driving the car and talks to herself  ",3
+Movies/114206548,1,  A nervous lady drives a car at night in the rain  ,2
+Movies/114206548,1,  Lady is driving a car  ,2
+Movies/114206548,1,  I refuse to be a victim  ,2
+Movies/114206548,1,  Raining at night  ,2
+Movies/114206548,1,  Driving in the rain  ,2
+Movies/114206548,1,  Zebra in the meadows  ,1
+Movies/114206548,1,  On the sunny beach  ,1

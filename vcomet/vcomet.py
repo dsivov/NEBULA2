@@ -35,7 +35,7 @@ class VCOMET_KG:
         self.gdb = self.nre.gdb
         self.mdmmt = MDMMT_API()
         self.temp_file = "/tmp/video_file.mp4" 
-        self.en = spacy.load('en_core_web_sm')
+        # self.en = spacy.load('en_core_web_sm')
         
     def download_video_file(self, movie):
         if os.path.exists(self.temp_file):
@@ -78,6 +78,7 @@ class VCOMET_KG:
     def get_places_and_events_for_scene(self, movie):
         stages = self.get_stages(movie)
         movie_candidates = []
+        url_link = ''
         vectors = []
         for stage in stages:
             stage_candidates_events = []
@@ -127,7 +128,8 @@ class VCOMET_KG:
                                     'stop': stage['stop'],
                                     'events': stage_candidates_events,
                                     'places': stage_candidates_places,
-                                    'actions': stage_candidates_actions
+                                    'actions': stage_candidates_actions,
+                                    'url_link': url_link
                                                         })
         return(movie_candidates, url_link)
 
@@ -193,7 +195,7 @@ class VCOMET_KG:
                 mdmmt.vmz_model,  # video modality
                 mdmmt.clip_model,  # image modality
                 mdmmt.model_vid,  # aggregator
-                path, t_start, t_end)
+                path, t_start, t_end, fps=fps, encode_type='mean')
             return(vemb, url_link)
         else:
             print("Stage too short")
@@ -219,14 +221,15 @@ class VCOMET_KG:
         # return(['Movies/114206816', 'Movies/114206849', 'Movies/114206892', 'Movies/114206952'])
 
     def insert_playgound_embeddings(self):
-        vc_collection = self.db.collection("nebula_vcomet_lighthouse_lsmdc_ffmpeg")
+        vc_collection = self.db.collection("nebula_vcomet_lighthouse_lsmdc_mean_v01")
         movies = self.get_playground_movies()
         for movie in movies:
             stage_data, url_link = self.get_places_and_events_for_scene(movie)
             for s in stage_data:
                 s['movie'] = movie
-                s['url_link'] = url_link
-                # vc_collection.insert(s)
+                # s['url_link'] = url_link
+                if s['url_link'] is not None:
+                    vc_collection.insert(s)
 
     '''
     This functions adds the 44 movie clips to nebula_development,
@@ -234,7 +237,7 @@ class VCOMET_KG:
     Every row will consist of `movie_id`, `scene_element`, `embedding`.
     '''
     def insert_playgound_by_mid_embeddings(self):
-        vc_collection = self.db.collection("nebula_mdmmt_vector_playground")
+        vc_collection = self.db.collection("nebula_mdmmt_vector_playground_v01")
         movies = self.get_playground_movies()
         for movie in movies:
             row_dict = {
@@ -393,10 +396,11 @@ def main():
     # a=0
     # kg.insert_playgound_by_mid_embeddings()
     # kg.get_playgound_embeddings()
-    movie_info = kg.download_and_get_minfo("Movies/114206816")
-    kg.mdmmt.encode_video_max()
-    print(movie_info)
+    # movie_info = kg.download_and_get_minfo("Movies/114206816")
+    # kg.mdmmt.encode_video_max()
+    # print(movie_info)
     # kg.insert_playgound_embeddings()
+    # kg.insert_playgound_by_mid_embeddings()
     # a=0
     # kg.print_movie_by_id(
     #    movie_id = 'Movies/114206816',

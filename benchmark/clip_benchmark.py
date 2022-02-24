@@ -155,7 +155,7 @@ class NebulaVideoEvaluation:
                 frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
 
         blurred = self.mark_blurred_frames(movie_name, boundary[0], boundary[1], blur_threshold=40)
-        good_ind = np.where(blurred[boundary[0]:boundary[1]] == 1)[0] + boundary[0]
+        good_ind = np.where(blurred[0:boundary[1]-boundary[0]] == 1)[0]
         if method == 'single':
             right_ind = good_ind[int(len(good_ind) / 2)]
             self.ind_array.append(right_ind)
