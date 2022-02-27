@@ -1,4 +1,3 @@
-from bert_commonsense_classifier import test
 from transformers import RobertaForSequenceClassification, RobertaTokenizerFast
 import torch
 from typing import List
