@@ -5,14 +5,15 @@ from typing import List
 class CS_API:
     def __init__(self,
                 model_params_path='./bart/commonsense_classifier/Subtask_A_Best_Model_.pth',
-                device_type='cpu'):
+                device_type='cpu',
+                device_id='cuda:0'):
         if not torch.cuda.is_available() and device_type=='gpu':
             print("ERROR: GPU is not available in your system, please use `device_type=cpu`")
             return None
         if device_type=='cpu':
             self.device = 'cpu'
         else:
-            self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+            self.device = torch.device(device_id if torch.cuda.is_available() else 'cpu')
         self.model_name = 'roberta-large'
         self.model_params_path = model_params_path
         print(f"Loading the model {self.model_name}...")
@@ -50,7 +51,7 @@ class CS_API:
 
 def main():
     weights_path = "./bart/commonsense_classifier/Subtask_A_Best_Model_.pth"
-    cs_validator = CS_API(model_params_path=weights_path, device_type='gpu')
+    cs_validator = CS_API(model_params_path=weights_path, device_type='gpu', device_id='cuda:0')
     test = ['hello', 'how are you?', 'People who look at the books and booklets take ties.']
     scores = cs_validator.get_sentences_score(test)
     print(scores)
