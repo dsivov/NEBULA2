@@ -178,6 +178,17 @@ class NRE_API:
             results.update(doc)
         return (results)
 
+    def get_scene_from_collection(self, movie_id, scene_element, collection):
+        results = {}
+        query = 'FOR doc IN {} FILTER doc.movie_id == "{}" AND doc.scene_element == {} RETURN doc'.format(collection,movie_id, scene_element)
+        #print(query)
+        cursor = self.db.aql.execute(query)
+        for doc in cursor:
+            results.update(doc)
+        return (results)
+
+    
+
 #nre = NRE_API()
 #nre.get_vcomet_data("Movies/114206264")
 # while True:

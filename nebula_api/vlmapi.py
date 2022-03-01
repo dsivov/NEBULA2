@@ -16,8 +16,9 @@ from nebula_api.clip_api import CLIP_API
 from vcomet.vcomet import VCOMET_KG
 
 class VLM_API:
-    def __init__(self, model_name='mdmmt_max'):
+    def __init__(self, model_name='mdmmt_mean', vcomet=None):
         self.available_class_names = ['clip_vit', 'clip_rn', 'mdmmt_max', 'mdmmt_mean', 'mdmmt_legacy']
+        self.vcomet = vcome if vcomet else VCOMET_KG()
         if model_name not in self.available_class_names:
             raise Exception(f"Model name invalid. Use one of these names: {self.available_class_names}")
         if model_name == "clip_vit":
@@ -27,8 +28,8 @@ class VLM_API:
         elif model_name == "mdmmt_max" or \
                 model_name == "mdmmt_mean" or \
                     model_name == "mdmmt_legacy":
-            self.mdmmt_api = MDMMT_API()
-        self.vcomet = VCOMET_KG()
+            # self.mdmmt_api = MDMMT_API()
+            self.mdmmt_api = self.vcomet.mdmmt
         self.remote_api = RemoteAPIUtility()
         print(f"Available class names: {self.available_class_names}")
     
@@ -62,7 +63,7 @@ class VLM_API:
         return vggish_model, vmz_model, clip_model, model_vid, t_start, t_end, fps, encode_type
 
 
-    def encode_video(self, mid, scene_element, class_name='clip_rn'):
+    def encode_video(self, mid, scene_element, class_name='mdmmt_mean'):
         movie_info, fps, fn = self.download_and_get_minfo(mid, to_print=True)
         path = fn
         if class_name == 'mdmmt_max' or class_name == 'mdmmt_mean' or class_name == 'mdmmt_legacy':
@@ -84,7 +85,7 @@ class VLM_API:
             raise Exception("Class name you entered was not found.")
         return vid_embedding
     
-    def encode_text(self, text, class_name='clip_rn'):
+    def encode_text(self, text, class_name='mdmmt_mean'):
         if class_name == 'clip_rn':
             text_embedding = self.clip_rn.clip_batch_encode_text(text)
             text_embedding = torch.stack(text_embedding,axis=0)
