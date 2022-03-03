@@ -19,24 +19,41 @@ from nebula_api.vlmapi import VLM_API
 class VCOMET_LOAD:
     def __init__(self):
         self.milvus_events = MilvusAPI(
-            'milvus', 'vcomet_vit_embedded_event', 'nebula_visualcomet', 1536)
+            'milvus', 'vcomet_vit_embedded_event', 'nebula_visualcomet', 768)
         self.milvus_places = MilvusAPI(
-            'milvus', 'vcomet_vit_embedded_place', 'nebula_visualcomet', 1536)
+            'milvus', 'vcomet_vit_embedded_place', 'nebula_visualcomet', 768)
         self.milvus_actions = MilvusAPI(
-            'milvus', 'vcomet_vit_embedded_actions', 'nebula_visualcomet', 1536)
+            'milvus', 'vcomet_vit_embedded_actions', 'nebula_visualcomet', 768)
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.nre = NRE_API()
         self.db = self.nre.db
         self.gdb = self.nre.gdb
         self.vlmodel = VLM_API(model_name='clip_vit')
+        self.vc_db = self.gdb.connect_db("nebula_visualcomet")
+
     
-    def load_database(self):
-        vector = self.vlmodel.encode_text("test", class_name='clip_vit')
-        print(vector.size())
+    def load_vit_vcomet_place(self):
+        query = 'FOR doc IN vcomet_kg RETURN DISTINCT doc.place'
+        cursor = self.vc_db.aql.execute(query)
+        for vc in cursor:
+            if len(vc.split()) < 9:  
+                vector = self.vlmodel.encode_text(vc, class_name='clip_vit')
+                print(len(vector.tolist()[0]))
+                meta = {
+                            'filename': 'none',
+                            'movie_id':'none',
+                            'nebula_movie_id': 'none',
+                            'stage': 'none',
+                            'frame_number': 'none',
+                            'sentence': vc,
+                        }
+                self.milvus_places.insert_vectors([vector.tolist()[0]], [meta])
+                #print(meta)
+                #input()
 
 def main():
     kg = VCOMET_LOAD()
-    kg.load_database()
+    kg.load_vit_vcomet_place()
     
 if __name__ == "__main__":
     main()
