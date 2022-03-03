@@ -31,7 +31,7 @@ class VCOMET_LOAD:
         self.vlmodel = VLM_API(model_name='clip_vit')
     
     def load_database(self):
-        vector = self.vlmodel.encode_text("test")
+        vector = self.vlmodel.encode_text("test", class_name='clip_vit')
         print(vector.size())
 
 def main():
