@@ -246,14 +246,20 @@ class MDMMT_API():
 
     def encode_video(self, vggish_model, vmz_model, clip_model, model_vid, path, t_start=None, t_end=None, fps=23, encode_type='max'):
         try:
-            timings_vggish, embs_vggish = self.vggish_compute_embs(vggish_model, path, t_start, t_end)
+            if t_end - t_start < 1.0:
+                timings_vggish, embs_vggish = None, None
+            else:
+                timings_vggish, embs_vggish = self.vggish_compute_embs(vggish_model, path, t_start, t_end)
         except NoAudio:
             timings_vggish, embs_vggish = None, None
         timings_vmz, embs_vmz = self.visual_compute_embs(vmz_model, path, t_start, t_end,
                                                     fps=fps, frames_per_clip=32, frame_crop_size=224, frame_size=224)
 
         output = []
-        time_length = int(t_end - t_start)
+        if t_end < 1.0:
+            time_length = 1
+        else:
+            time_length = int(t_end - t_start)
         t_end = t_start + 1
         for _ in range(time_length):
             timings_clip, embs_clip = self.visual_compute_embs(clip_model, path, t_start, t_end,
@@ -338,9 +344,9 @@ class MDMMT_API():
 
 def main():
     mdmmt = MDMMT_API()
-    path = '/dataset/development/1010_TITANIC_00_41_32_072-00_41_40_196.mp4'
+    path = '/movies/1010_TITANIC_00_41_32_072-00_41_40_196.mp4'
     t_start=0
-    t_end=7
+    t_end=0.3
     # t_start, t_end = get_time_by_frames(frame_start, frame_stop, path)
     # get_places_and_events_and_actions(t_start, t_end, path)
     vemb = mdmmt.encode_video(
