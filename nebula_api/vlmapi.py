@@ -13,7 +13,7 @@ from experts.common.RemoteAPIUtility import RemoteAPIUtility
 from nebula_api.mdmmt_api.mdmmt_api import MDMMT_API
 
 from nebula_api.clip_api import CLIP_API
-from vcomet.vcomet import VCOMET_KG
+
 
 class VLM_API:
     def __init__(self, model_name='mdmmt_mean', vcomet=None):
@@ -32,13 +32,14 @@ class VLM_API:
             # self.mdmmt_api = MDMMT_API()
             self.mdmmt_api = self.vcomet.mdmmt
         self.remote_api = RemoteAPIUtility()
+        self.nre = NRE_API()
         print(f"Available class names: {self.available_class_names}")
     
     def download_and_get_minfo(self, mid, to_print=False):
         # Download the video locally
-        fps, url_link = self.vcomet.download_video_file(mid)
+        fps, url_link = self.nre.download_video_file(mid)
         movie_info = self.remote_api.get_movie_info(mid)
-        fn = self.vcomet.temp_file
+        fn = self.nre.temp_file
         if to_print:
             print(f"Movie info: {movie_info}")
             print(f"fn path: {fn}")

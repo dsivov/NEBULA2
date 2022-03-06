@@ -5,7 +5,7 @@ import models.CLIP.clip as clip
 class CLIP:
     def __init__(self):
         self.device = "cuda"
-        self.model, _ = clip.load("ViT-B/32", device=self.device, jit=False)
+        self.model, _ = clip.load("ViT-B/32", device=self.device, jit=False, download_root="../ckpts/")
         self.mean = torch.tensor([0.48145466, 0.4578275, 0.40821073])[None,:,None,None].cuda()
         self.std = torch.tensor([0.26862954, 0.26130258, 0.27577711])[None,:,None,None].cuda()
  
