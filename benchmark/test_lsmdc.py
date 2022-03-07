@@ -2,9 +2,11 @@ import pandas as pd
 import os
 from arango import ArangoClient
 import pickle
-from benchmark.connection import connect_db
-
+from nebula_api.milvus_api import connect_db
+from datasets import list_metrics
 from benchmark.nlp_benchmark import NebulaStoryEvaluation
+from utils.compare_text import CompareText
+import numpy as np
 
 def create_annotation_data_frame(annotation_file, video_links, jpg_link) -> pd.DataFrame:
     """
@@ -209,6 +211,90 @@ def evaluate_stories():
 
     pass
 
+
+def get_dataset_movies():
+    db = connect_db('nebula_development')
+
+    query = 'FOR doc IN nebula_comet2020_lsmdc_scored_v03 RETURN doc'
+    cursor = db.aql.execute(query, ttl=3600)
+
+    movies_list = []
+    for cnt, movie_data in enumerate(cursor):
+        movies_list.append(movie_data)
+
+    return movies_list
+
+def test_retrieval():
+    """
+    Test if our resutls are good for retrieval of the right frame
+    :return:
+    """
+    # get the movies that we want to test
+    metrics_list = list_metrics()
+    print(metrics_list)
+    movies = get_dataset_movies()
+    val_file = '/home/migakol/data/small_lsmdc_test/gt/LSMDC16_annos_val.csv'
+    train_file = '/home/migakol/data/small_lsmdc_test/gt/LSMDC16_annos_training.csv'
+    someone_annotation ='/home/migakol/data/small_lsmdc_test/gt/annotations-someone.csv'
+
+    save_dir_annotation = '/home/migakol/data/small_lsmdc_test/'
+
+    gt_data = pd.read_csv(someone_annotation, encoding='unicode_escape', delimiter='\t')
+    gt_data = gt_data['Her mind wanders for a beat.'].tolist()
+    comp_text = CompareText()
+
+    # Go over the movies
+    for movie in movies:
+        print(movie)
+        # Get the clipcap sentence
+        clipcap_sent = movie['base'][0]
+        clipcap_sent = [clipcap_sent] * len(gt_data)
+        P, R, F1 = comp_text.compare_sentences(test_sent=clipcap_sent, gt_sent=gt_data, metric='bert')
+
+        save_name = save_dir_annotation + movie['_key'] + f'.pkl'
+        f = open(save_name, 'wb')
+        pickle.dump([P, R], f)
+        print('computed')
+
+
+def compare_retrieval_results():
+    save_dir_annotation = '/home/migakol/data/small_lsmdc_test/'
+    someone_annotation = '/home/migakol/data/small_lsmdc_test/gt/annotations-someone.csv'
+    movies = get_dataset_movies()
+
+    gt_data = pd.read_csv(someone_annotation, encoding='unicode_escape', delimiter='\t')
+    # gt_data = gt_data['Her mind wanders for a beat.'].tolist()
+
+    pr_array = []
+    re_array = []
+
+    for movie in movies:
+        # print(movie)
+        print(movie['url'].split('/')[-1])
+
+        movie_name = movie['url'].split('/')[-1].split('.')[0]
+        for k in range(6):
+            ind = -(movie_name[::-1].find('_') + 1)
+            movie_list = list(movie_name)
+            movie_list[ind] = '.'
+            movie_name = ''.join(movie_list)
+        load_name = save_dir_annotation + movie['_key'] + f'.pkl'
+        f = open(load_name, 'rb')
+        # res = pickle.load(f)
+        [P, R] = pickle.load(f)
+        p_ind = np.argsort(P)[::-1]
+        r_ind = np.argsort(R)[::-1]
+        movie_loc = np.where(gt_data['0001_American_Beauty_00.00.51.926-00.00.54.129'] == movie_name)[0][0]
+
+        pr_loc = np.where(p_ind == movie_loc)[0][0]
+        re_loc = np.where(r_ind == movie_loc)[0][0]
+
+        pr_array.append(pr_loc)
+        re_array.append(re_loc)
+
+
+    print('finished')
+
 if __name__ == '__main__':
     print('Start textual comparison')
 
@@ -218,9 +304,17 @@ if __name__ == '__main__':
     jpg_links = 'downloadLinksJpg.txt'
     save_benchmark = 'text_benchmark.npy'
 
+    # Test retrieval - get the best result,
+    # test_retrieval()
+
+    # Compare the results
+    compare_retrieval_results()
+
     # lsmdc_stats()
-    debug()
-    create_lsmdc_dataset(os.path.join(data_folder, annotation_file))
+    # debug()
+    # create_lsmdc_dataset(os.path.join(data_folder, annotation_file))
+
+
     # evaluate_stories()
     # create_siimilarity_matrix()
 

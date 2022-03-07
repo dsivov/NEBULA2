@@ -186,7 +186,7 @@ class VCOMET_KG:
         
         length = t_end - t_start
         print("---------------")
-        print(f"Movie ID: {movie}")
+        print(f"Movie ID: {movie}")#
         print("Start/stop", t_start, " ", t_end)
         
         # if ((t_end - t_start) >= 1) and (t_start >=0):

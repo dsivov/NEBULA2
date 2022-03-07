@@ -1,6 +1,8 @@
 import random
 import sys
+import os
 import time
+import urllib
 from arango import ArangoClient
 from nebula_api.databaseconnect import DatabaseConnector
 from config_nebula.config import NEBULA_CONF
@@ -19,6 +21,7 @@ class NRE_API:
         self.es_host = config.get_elastic_host()
         self.index_name = config.get_elastic_index()
         self.gdb = gdb
+        self.temp_file = "/tmp/video_file.mp4" 
     
     def get_new_movies(self):
         nebula_movies=[]
@@ -177,6 +180,43 @@ class NRE_API:
         for doc in cursor:
             results.update(doc)
         return (results)
+
+    def get_scene_from_collection(self, movie_id, scene_element, collection):
+        results = {}
+        query = 'FOR doc IN {} FILTER doc.movie_id == "{}" AND doc.scene_element == {} RETURN doc'.format(collection,movie_id, scene_element)
+        #print(query)
+        cursor = self.db.aql.execute(query)
+        for doc in cursor:
+            results.update(doc)
+        return (results)
+
+    def get_movie_url(self, movie):
+        query = 'FOR doc IN Movies FILTER doc._id == "{}" RETURN doc'.format(movie)
+        cursor = self.db.aql.execute(query)
+        url_prefix = "http://ec2-18-159-140-240.eu-central-1.compute.amazonaws.com:7000/"
+        url_link = ''
+        for doc in cursor:
+            url_link = url_prefix+doc['url_path']
+            url_link = url_link.replace(".avi", ".mp4")   
+        
+        return url_link
+        
+    def download_video_file(self, movie):
+        import cv2
+        if os.path.exists(self.temp_file):
+            os.remove(self.temp_file)
+        query = 'FOR doc IN Movies FILTER doc._id == "{}" RETURN doc'.format(movie)
+        cursor = self.db.aql.execute(query)
+        url_prefix = "http://ec2-18-159-140-240.eu-central-1.compute.amazonaws.com:7000/"
+        url_link = ''
+        for doc in cursor:
+            url_link = url_prefix+doc['url_path']
+            url_link = url_link.replace(".avi", ".mp4")   
+            print(url_link)
+            urllib.request.urlretrieve(url_link, self.temp_file) 
+        video = cv2.VideoCapture(self.temp_file)
+        fps = video.get(cv2.CAP_PROP_FPS)
+        return(fps, url_link)
 
 #nre = NRE_API()
 #nre.get_vcomet_data("Movies/114206264")

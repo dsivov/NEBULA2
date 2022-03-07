@@ -6,39 +6,18 @@ movie_id,stage,Text,Quality
 ,,,
 ,,,
 #Movie 1: Off the ship,,,
-Movies/114206952,0,  Dressed up men and women walking away in the evening  ,3
-Movies/114206952,0,  Elegantly dressed crowd walking away at night  ,3
-Movies/114206952,0,  A few men and women getting out of a wooden door in front of metal scaffolds  ,3
-Movies/114206952,0,  A few persons getting out of the door in the morning  ,2
-Movies/114206952,0,  An elegant bunch of people standing  ,2
-Movies/114206952,0,  A group of men and women in a room  ,2
+Movies/114206952,0,  Upset boy sits in the train station ,3
+Movies/114206952,0,  The boy waits for the train to arrive in the train station,3
+Movies/114206952,0,  The boy sits at night in the train station next to a wall,3
+Movies/114206952,0,  Boy in train station with people in the background,2
+Movies/114206952,0,  Alone at night in the station,2
 Movies/114206952,0,  A soldier running away on a battlefield  ,1
 Movies/114206952,0,  Many athletes running towards the finish line  ,1
 Movies/114206952,0,  Animals in the zoo  ,1
 Movies/114206952,0,  A crying baby at night  ,1
+,,,
 ,,    ,
-Movies/114206952,1,  Dressed up men and women getting off a ship  ,3
-Movies/114206952,1,  Elegantly dressed crowd walking away at night  ,2
-Movies/114206952,1,  Men in suits and bow ties and dressed up ladies unboarding a ship  ,3
-Movies/114206952,1,  An elegant crowd disembarking a ship with the skipper in the background  ,3
-Movies/114206952,1,  A couple holding hands on the bridge at night  ,2
-Movies/114206952,1,  A single well-dressed man walks away from a boat  ,2
-Movies/114206952,1,  A lady in a swimsuit poses to the camera  ,1
-Movies/114206952,1,  A frightened crowd of poor people running away in fear  ,1
-Movies/114206952,1,  An elephant in the jungle  ,1
-Movies/114206952,1,  A lion chases a cat in the street  ,1
-,,    ,
-Movies/114206952,2,  Dressed up men and women getting off a mid-size steamboat on a dock  ,3
-Movies/114206952,2,  Elegantly dressed couples unboarding a nice steamboat on a lighted dock at night  ,3
-Movies/114206952,2,  A mid-size steamboat with lifesavers is docking next to a lighted dock and elegant people are unboarding at night  ,3
-Movies/114206952,2,  Elegantly dressed crowd walking away at night  ,2
-Movies/114206952,2,  A couple holding hands on the bridge at night  ,2
-Movies/114206952,2,  A single well-dressed man walks away from a boat  ,2
-Movies/114206952,2,  A frightened crowd of poor people running away in fear  ,1
-Movies/114206952,2,  An elephant in the jungle  ,1
-Movies/114206952,2,  A lion chases a cat in the street  ,1
-Movies/114206952,2,  A boy plays with a ball  ,1
-,,    ,
+,,,
 Movies/114206952,3,  A blonde receptionist hands-off pamphlets to a group of elegantly dressed men and women  ,3
 Movies/114206952,3,  A group of people queueing up in front of a reception desk  ,3
 Movies/114206952,3,  A group of men and women get papers from a blond clerk in a travel reception desk  ,3
