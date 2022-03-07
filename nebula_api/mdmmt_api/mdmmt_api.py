@@ -263,6 +263,8 @@ class MDMMT_API():
         else:
             time_length = int(t_end - t_start)
         t_end = t_start + 1
+        if time_length < 1:
+            time_length = 1
         for _ in range(time_length):
             timings_clip, embs_clip = self.visual_compute_embs(clip_model, path, t_start, t_end,
                                                 fps=fps, frames_per_clip=1, frame_crop_size=224, frame_size=224)
