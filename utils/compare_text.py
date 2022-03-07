@@ -39,10 +39,16 @@ class CompareText:
             R = None
             S = None
         elif metric == 'bert':
-            P, R, S = self.curr_metric.score([test_sent], [gt_sent])
-            P = 0.5 + 0.5 * P.numpy()[0]
-            R = 0.5 + 0.5 * R.numpy()[0]
-            S = 2*(P * R) / (P + R)
+            if type(test_sent) == list and type(gt_sent) == list:
+                P, R, S = self.curr_metric.score(test_sent, gt_sent)
+                P = 0.5 + 0.5 * P.numpy()
+                R = 0.5 + 0.5 * R.numpy()
+                S = 2 * (P * R) / (P + R)
+            else:
+                P, R, S = self.curr_metric.score([test_sent], [gt_sent])
+                P = 0.5 + 0.5 * P.numpy()[0]
+                R = 0.5 + 0.5 * R.numpy()[0]
+                S = 2*(P * R) / (P + R)
         return P, R, S
 
 
