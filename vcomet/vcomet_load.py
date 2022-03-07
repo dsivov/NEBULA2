@@ -1,20 +1,12 @@
-from pathlib import Path
-import os.path
-import os
-
-from tqdm.std import tqdm
 from nebula_api.milvus_api import MilvusAPI
 import torch
 #import cv2
-from PIL import Image
-import numpy as np
-import heapq
-import re
 from nebula_api.nebula_enrichment_api import NRE_API
 
 #from nebula_api.mdmmt_api.mdmmt_api import MDMMT_API
 from experts.common.RemoteAPIUtility import RemoteAPIUtility
 from nebula_api.vlmapi import VLM_API
+
 
 class VCOMET_LOAD:
     def __init__(self):
@@ -50,10 +42,64 @@ class VCOMET_LOAD:
                 self.milvus_places.insert_vectors([vector.tolist()[0]], [meta])
                 #print(meta)
                 #input()
+    def load_vit_vcomet_actions(self):    
+        query = 'FOR doc IN vcomet_kg RETURN DISTINCT doc'
+        print(query)
+        cursor = self.vc_db.aql.execute(query)    
+        for vcs in cursor:
 
+            if 'intent' in vcs:
+                for vc in vcs['intent']:
+                    if len(vc.split()) < 9: 
+                        print(vc) 
+                        vector = self.vlmodel.encode_text(vc, class_name='clip_vit')
+                        print(len(vector.tolist()[0]))
+                        meta = {
+                                    'filename': 'none',
+                                    'movie_id':'none',
+                                    'nebula_movie_id': 'none',
+                                    'stage': 'none',
+                                    'frame_number': 'none',
+                                    'sentence': vc,
+                                }
+                        self.milvus_actions.insert_vectors([vector.tolist()[0]], [meta])
+
+            if 'after' in vcs:
+                for vc in vcs['intent']:
+                    if len(vc.split()) < 9: 
+                        print(vc) 
+                        vector = self.vlmodel.encode_text(vc, class_name='clip_vit')
+                        print(len(vector.tolist()[0]))
+                        meta = {
+                                    'filename': 'none',
+                                    'movie_id':'none',
+                                    'nebula_movie_id': 'none',
+                                    'stage': 'none',
+                                    'frame_number': 'none',
+                                    'sentence': vc,
+                                }
+                        self.milvus_actions.insert_vectors([vector.tolist()[0]], [meta])
+
+            if 'before' in vcs:
+                for vc in vcs['intent']:
+                    if len(vc.split()) < 9: 
+                        print(vc) 
+                        vector = self.vlmodel.encode_text(vc, class_name='clip_vit')
+                        print(len(vector.tolist()[0]))
+                        meta = {
+                                    'filename': 'none',
+                                    'movie_id':'none',
+                                    'nebula_movie_id': 'none',
+                                    'stage': 'none',
+                                    'frame_number': 'none',
+                                    'sentence': vc,
+                                }
+                        self.milvus_actions.insert_vectors([vector.tolist()[0]], [meta])
 def main():
     kg = VCOMET_LOAD()
-    kg.load_vit_vcomet_place()
+    #kg.load_vit_vcomet_place()
+    kg.load_vit_vcomet_actions()
+   
     
 if __name__ == "__main__":
     main()

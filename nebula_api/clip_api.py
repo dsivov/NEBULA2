@@ -32,6 +32,25 @@ class CLIP_API:
         else: 
             return None
 
+    def clip_encode_frame(self, fn, movie_id, scene_element):
+        if (fn):
+            remote_api = RemoteAPIUtility()
+            metadata = remote_api.get_movie_info(movie_id)
+            mdfs = metadata['mdfs'][scene_element]
+            video_file = Path(fn)
+            file_name = fn
+            print(file_name)
+            if video_file.is_file():
+                cap = cv2.VideoCapture(fn)
+                cap.set(cv2.CAP_PROP_POS_FRAMES, mdfs[2])
+                ret, frame_ = cap.read() # Read the frame
+                if not ret:
+                        print("File not found")
+                else:
+                    feature_t = self._calculate_images_features(frame_)
+                    feature_t /= feature_t.norm(dim=-1, keepdim=True)
+            return(feature_t)
+
     def clip_encode_video(self, fn, movie_id, scene_element):        
         if (fn):
             remote_api = RemoteAPIUtility()
@@ -53,6 +72,7 @@ class CLIP_API:
                         print("File not found")
                     else:
                         feature_t = self._calculate_images_features(frame_)
+                        feature_t /= feature_t.norm(dim=-1, keepdim=True)
                         feature_mdfs.append(feature_t.cpu().detach().numpy())   
                 feature_mean = np.mean(feature_mdfs, axis=0)
                 feature_t = torch.from_numpy(feature_mean)                

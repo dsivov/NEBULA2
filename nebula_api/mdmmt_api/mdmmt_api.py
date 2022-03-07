@@ -121,6 +121,8 @@ class MDMMT_API():
         idxs = range(0, len(segms), batch_size)
         for idx in idxs:
             embs.append(model(segms[idx: idx + batch_size]))
+        if len(embs) < 1:
+            raise NoAudio
         embs = np.concatenate(embs, axis=0)
         return timings, embs
 
