@@ -76,6 +76,8 @@ class VLM_API:
             vid_embedding = self.clip_rn.clip_encode_video(fn, mid, scene_element)
         elif class_name == 'clip_vit':
             vid_embedding = self.clip_vit.clip_encode_video(fn, mid, scene_element)
+        elif class_name == 'clip_vit_f':
+            vid_embedding = self.clip_vit.clip_encode_frame(fn, mid, scene_element)
         elif class_name == 'mdmmt_max':
             vid_embedding = self.mdmmt_api.encode_video(vggish_model, vmz_model, clip_model, model_vid, path, t_start, t_end, fps, encode_type)
         elif class_name == 'mdmmt_mean':

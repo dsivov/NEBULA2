@@ -190,16 +190,13 @@ class NRE_API:
             results.update(doc)
         return (results)
 
-    def get_movie_url(self, movie):
-        query = 'FOR doc IN Movies FILTER doc._id == "{}" RETURN doc'.format(movie)
-        cursor = self.db.aql.execute(query)
-        url_prefix = "http://ec2-18-159-140-240.eu-central-1.compute.amazonaws.com:7000/"
-        url_link = ''
-        for doc in cursor:
-            url_link = url_prefix+doc['url_path']
-            url_link = url_link.replace(".avi", ".mp4")   
-        
-        return url_link
+    def get_stages(self, m):
+        query_r = 'FOR doc IN StoryLine FILTER doc.arango_id == "{}" RETURN doc'.format(m)
+        cursor_r = self.db.aql.execute(query_r)
+        stages = []
+        for stage in cursor_r:
+            stages.append(stage)
+        return(stages)
         
     def download_video_file(self, movie):
         import cv2

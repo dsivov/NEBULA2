@@ -34,7 +34,7 @@ class VCOMET_KG:
         self.db = self.nre.db
         self.gdb = self.nre.gdb
         self.mdmmt = MDMMT_API()
-        self.temp_file = "/tmp/video_file.mp4" 
+        self.temp_file = "/home/ilan/git/NEBULA2-latest/NEBULA2/video_file.mp4" #"/tmp/video_file.mp4" 
         # self.en = spacy.load('en_core_web_sm')
         
     def download_video_file(self, movie):
@@ -177,29 +177,29 @@ class VCOMET_KG:
         mdmmt = self.mdmmt
         path = self.temp_file
         fps, url_link = self.download_video_file(movie)
-        t_start = start_f / fps
-        t_end = stop_f / fps
-
-        if t_start == t_end:
+        t_start = start_f // fps
+        t_end = stop_f // fps
+        if t_end < 1:
+            t_end = stop_f / fps
+        if t_start == t_end and t_start >= 1:
             t_start = t_start - 1
         
         length = t_end - t_start
         print("---------------")
-        print(f"Movie ID: {movie}")
+        print(f"Movie ID: {movie}")#
         print("Start/stop", t_start, " ", t_end)
         
         # if ((t_end - t_start) >= 1) and (t_start >=0):
-        if ((t_end - t_start) >= 1) and (t_start >=0):
-            vemb = mdmmt.encode_video(
-                mdmmt.vggish_model,  # audio modality
-                mdmmt.vmz_model,  # video modality
-                mdmmt.clip_model,  # image modality
-                mdmmt.model_vid,  # aggregator
-                path, t_start, t_end, fps=fps, encode_type='mean')
-            return(vemb, url_link)
-        else:
-            print("Stage too short")
-            return(None, None)
+        vemb = mdmmt.encode_video(
+            mdmmt.vggish_model,  # audio modality
+            mdmmt.vmz_model,  # video modality
+            mdmmt.clip_model,  # image modality
+            mdmmt.model_vid,  # aggregator
+            path, t_start, t_end, fps=fps, encode_type='mean')
+        return(vemb, url_link)
+        # else:
+        #     print("Stage too short")
+        #     return(None, None)
 
 
     # def mdmmt_video_encode_modified(self, t_start, t_end, path):
@@ -249,9 +249,10 @@ class VCOMET_KG:
             for s in stage_data:
                 row_dict['scene_element'] = s['scene_element']
                 mdmmt_v, _ = self.mdmmt_video_encode(s['start'], s['stop'], movie)
+                print(s['start'], s['stop'])
                 if mdmmt_v is not None:
                     row_dict['embedding'] = mdmmt_v.cpu().numpy().tolist()
-                    vc_collection.insert([row_dict])
+                    # vc_collection.insert([row_dict])
         
 
     
@@ -391,7 +392,7 @@ def main():
 
     #bad = [movie = "Movies/114206816", 114207361 - wierd,]
     kg = VCOMET_KG()
-    # kg.insert_playgound_by_mid_embeddings()
+    kg.insert_playgound_by_mid_embeddings()
     # kg.get_playgound_embeddings()
     # a=0
     # kg.insert_playgound_by_mid_embeddings()

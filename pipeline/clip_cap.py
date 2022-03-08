@@ -8,6 +8,7 @@ import torch.nn.functional as nnf
 from PIL import Image
 import clip
 import cv2 as cv
+import os
 
 N = type(None)
 V = np.array
@@ -212,35 +213,49 @@ class ClipCap:
         self.tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
         self.prefix_length = 10
         if is_coco:
-            self.model_path = '/home/migakol/data/clip_cap/coco_weights.pt'
+            self.model_path = '/home/ilan/git/NEBULA2-latest/NEBULA2/pipeline/weights/coco_weights.pt'
         else:
-            self.model_path = '/home/migakol/data/clip_cap/conceptual_weights.pt'
+            self.model_path = '/home/ilan/git/NEBULA2-latest/NEBULA2/pipeline/weights/conceptual_weights.pt'
 
         self.model = ClipCaptionModel(self.prefix_length)
 
         self.model.load_state_dict(torch.load(self.model_path, map_location=CPU))
         self.model = self.model.eval()
-        device = 'cpu'
-        self.model = self.model.to(device)
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else 'cpu')
+        self.model = self.model.to(self.device)
 
-    def generate_text(self, emb):
+    def generate_text(self, emb, use_beam_search=False):
         """
         :param emb: - clip embedding
         :return:
         """
-        prefix_embed = self.model.clip_project(torch.tensor(emb, dtype=torch.float32)).reshape(1, self.prefix_length,
-                                                                                               -1)
-        generated_text_prefix = generate2(self.model, self.tokenizer, embed=prefix_embed)
+        prefix_embed = self.model.clip_project(torch.tensor(emb, dtype=torch.float32)).reshape(1, self.prefix_length,-1)
+         
+        if use_beam_search:
+            generated_text_prefix = generate_beam(self.model, self.tokenizer, embed=prefix_embed, beam_size=5)
+        else:                                                                                       
+            generated_text_prefix = generate2(self.model, self.tokenizer, embed=prefix_embed)
         return generated_text_prefix
 
 
 if __name__ == '__main__':
-    img_name = '/home/migakol/data/rrr.png'
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    
+    device = torch.device("cuda:0" if torch.cuda.is_available() else 'cpu')
     model, preprocess = clip.load("ViT-B/32", device=device)
-    frame = cv.imread(img_name)
-    img = preprocess(Image.fromarray(frame)).unsqueeze(0).to(device)
-    embedding = model.encode_image(img)
-
     clip_cap = ClipCap()
-    clip_cap.generate_text(embedding)
+    mdfs_path = "/movies/mdfs/"
+    prefix_link = "http://ec2-18-159-140-240.eu-central-1.compute.amazonaws.com:7000/static/dataset1/mdfs/"
+    images = [os.path.join(mdfs_path, image) for image in os.listdir(mdfs_path)]
+    for img_path in images:
+        frame = cv.imread(img_path)
+        img = preprocess(Image.fromarray(frame)).unsqueeze(0).to(device)
+        embedding = model.encode_image(img)
+        output = clip_cap.generate_text(embedding, use_beam_search=True)
+        image_name = img_path.split("/")[-1]
+        print("Input:")
+        print(image_name)
+        link_path = os.path.join(prefix_link, image_name)
+        print(f"Link: {link_path}")
+        print("Output")
+        for out in output:
+            print(out)
