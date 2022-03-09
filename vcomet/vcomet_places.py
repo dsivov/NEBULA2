@@ -39,15 +39,12 @@ class VCOMET_PLACES:
                 ('Movies/114206548', 0),
                 ('Movies/114206548', 1)])
 
-    def get_places_for_scene(self, movie, stage):
-        movie_candidates = []
+    def get_actions_for_scene(self, movie, stage):
+        #movie_candidates = []
         vectors = []
-        stage_candidates_events = []
-        stage_candidates_places = []
-        stage_candidates_actions = []
-        candidates_places = []
-        scored_places = {}
-        top_places = {}
+        candidates_actions = []
+        scored_actions = {}
+        top_actions = []
         #print("Find candidates for scene")
         #input()
         path = ""  
@@ -59,52 +56,85 @@ class VCOMET_PLACES:
         vectors.append(clip_v.tolist()[0])
         if clip_v is not None:
             clip_v = clip_v.tolist()[0]
-            similar_nodes = self.milvus_places.search_vector(100, clip_v)
-            max_sim = similar_nodes[0][0]
+            similar_nodes = self.milvus_actions.search_vector(50, clip_v)
+            #max_sim = similar_nodes[0][0]
             #print("Candidate Places of scene")
             for node in similar_nodes:
-                stage_candidates_places.append([node[0], node[1]['sentence']])
-                candidates_places.append(node[1]['sentence'])
-            mdmmvtext_v = self.mdmmtmodel.encode_text(candidates_places)
+                #stage_candidates_actions.append([node[0], node[1]['sentence']])
+                candidates_actions.append(node[1]['sentence'])
+            mdmmvtext_v = self.mdmmtmodel.encode_text(candidates_actions)
             scores = torch.matmul(mdmmvtext_v, mdmmt_v)
-            for txt, score in zip(candidates_places, scores):
-                scored_places[score.tolist()]= txt
-            top_k = heapq.nlargest(8, scored_places)
+            for txt, score in zip(candidates_actions, scores):
+                scored_actions[score.tolist()]= txt
+            top_k = heapq.nlargest(5, scored_actions)
             for k in top_k:
-                top_places[k] = scored_places[k]
-                #print('-----------> '+  str(node[1]['sentence']))
-            
-            # similar_nodes = self.milvus_actions.search_vector(40, vector)
-            # max_sim = similar_nodes[0][0]
-            # #print("Candidate Actions of scene")
-            # for node in similar_nodes:
-            #     if (max_sim - node[0]) > 0.05:
-            #         break
-            #     #max_sim = node[0]
-            #     stage_candidates_actions.append([node[0], node[1]['sentence']])
-            #     #print('-----------> ' + str(node[1]['sentence']))
-        movie_candidates.append({
-                                'movie_id': movie,
-                                'scene_element': stage,
-                                'start': '', 
-                                'stop': '',
-                                #'events': stage_candidates_events,
-                                'places': top_places,
-                                #'actions': stage_candidates_actions,
-                                'url_link': url_prefix + url
-                                                    })
+                top_actions.append(scored_actions[k])
+        movie_candidates = top_actions
         return(movie_candidates)
 
-def main():
-    kg = VCOMET_PLACES()
-    movies = kg.get_playground_movies()
-    for movie in movies:
-        scene_elements = kg.nre.get_stages(movie)
-        for scene_element in scene_elements:
-            places = kg.get_places_for_scene(movie, scene_element['scene_element'])
-            print(places)
-            input()
-        #kg.places_collection.insert(places)
+    def get_places_for_scene(self, movie, stage):
+        #movie_candidates = []
+        vectors = []
+        candidates_actions = []
+        scored_actions = {}
+        top_actions = []
+        #print("Find candidates for scene")
+        #input()
+        path = ""  
+        url_prefix = "http://ec2-18-159-140-240.eu-central-1.compute.amazonaws.com:7000/"
+        url = self.nre.get_movie_url(movie)          
+        clip_v = self.clipmodel.encode_video(movie, stage, class_name='clip_vit_f' )
+        mdmmt_v = self.mdmmtmodel.encode_video(movie, stage)
+
+        vectors.append(clip_v.tolist()[0])
+        if clip_v is not None:
+            clip_v = clip_v.tolist()[0]
+            similar_nodes = self.milvus_places.search_vector(50, clip_v)
+            #max_sim = similar_nodes[0][0]
+            #print("Candidate Places of scene")
+            for node in similar_nodes:
+                #stage_candidates_actions.append([node[0], node[1]['sentence']])
+                candidates_actions.append(node[1]['sentence'])
+            mdmmvtext_v = self.mdmmtmodel.encode_text(candidates_actions)
+            scores = torch.matmul(mdmmvtext_v, mdmmt_v)
+            for txt, score in zip(candidates_actions, scores):
+                scored_actions[score.tolist()]= txt
+            top_k = heapq.nlargest(5, scored_actions)
+            for k in top_k:
+                top_actions.append(scored_actions[k])
+             
+        movie_candidates = top_actions
+        return(movie_candidates)
+    
+    def get_lsmdc_s1(self, db):
+        s1_lsmdc_movies = []
+        
+        query = 'FOR doc IN s1_lsmdc_dima RETURN doc'
+    
+        cursor = db.aql.execute(query)
+        for data in cursor:
+            s1_lsmdc_movies.append(data)
+        #print(s1_lsmdc_movies)
+        return(s1_lsmdc_movies)
+
+    def update_actions(self, db, actions, movie_id, scene_element):
+        query = 'FOR doc IN s1_lsmdc_dima FILTER doc.movie_id == @movie_id AND  doc.scene_element == @scene_element UPDATE doc WITH {actions: @actions} in s1_lsmdc_dima'
+        db.aql.execute(query, bind_vars={'actions': actions, 'movie_id': movie_id, 'scene_element': scene_element})
+
+    def update_places(self, db, places, movie_id, scene_element):
+        query = 'FOR doc IN s1_lsmdc_dima FILTER doc.movie_id == @movie_id AND  doc.scene_element == @scene_element UPDATE doc WITH {places: @places} in s1_lsmdc_dima'
+        db.aql.execute(query, bind_vars={'places': places, 'movie_id': movie_id, 'scene_element': scene_element})
+    
+    def main():
+        kg = VCOMET_PLACES()
+        movies = kg.get_playground_movies()
+        for movie in movies:
+            scene_elements = kg.nre.get_stages(movie)
+            for scene_element in scene_elements:
+                places = kg.get_places_for_scene(movie, scene_element['scene_element'])
+                print(places)
+                input()
+            #kg.places_collection.insert(places)
     
 if __name__ == "__main__":
     main()
