@@ -1,10 +1,7 @@
 from nebula_api.milvus_api import MilvusAPI
 import torch
 import heapq
-#import cv2
 from nebula_api.nebula_enrichment_api import NRE_API
-
-#from nebula_api.mdmmt_api.mdmmt_api import MDMMT_API
 from experts.common.RemoteAPIUtility import RemoteAPIUtility
 from nebula_api.vlmapi import VLM_API
 
@@ -46,7 +43,6 @@ class VCOMET_PLACES:
         scored_actions = {}
         top_actions = []
         #print("Find candidates for scene")
-        #input()
         path = ""  
         url_prefix = "http://ec2-18-159-140-240.eu-central-1.compute.amazonaws.com:7000/"
         url = self.nre.get_movie_url(movie)          
@@ -57,8 +53,6 @@ class VCOMET_PLACES:
         if clip_v is not None:
             clip_v = clip_v.tolist()[0]
             similar_nodes = self.milvus_actions.search_vector(50, clip_v)
-            #max_sim = similar_nodes[0][0]
-            #print("Candidate Places of scene")
             for node in similar_nodes:
                 #stage_candidates_actions.append([node[0], node[1]['sentence']])
                 candidates_actions.append(node[1]['sentence'])
@@ -79,7 +73,6 @@ class VCOMET_PLACES:
         scored_actions = {}
         top_actions = []
         #print("Find candidates for scene")
-        #input()
         path = ""  
         url_prefix = "http://ec2-18-159-140-240.eu-central-1.compute.amazonaws.com:7000/"
         url = self.nre.get_movie_url(movie)          
