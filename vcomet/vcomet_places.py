@@ -46,7 +46,7 @@ class VCOMET_PLACES:
         path = ""  
         url_prefix = "http://ec2-18-159-140-240.eu-central-1.compute.amazonaws.com:7000/"
         url = self.nre.get_movie_url(movie)          
-        clip_v = self.clipmodel.encode_video(movie, stage, class_name='clip_vit_f' )
+        clip_v = self.clipmodel.encode_video(movie, stage, class_name='clip_vit' )
         mdmmt_v = self.mdmmtmodel.encode_video(movie, stage)
 
         vectors.append(clip_v.tolist()[0])
@@ -76,7 +76,7 @@ class VCOMET_PLACES:
         path = ""  
         url_prefix = "http://ec2-18-159-140-240.eu-central-1.compute.amazonaws.com:7000/"
         url = self.nre.get_movie_url(movie)          
-        clip_v = self.clipmodel.encode_video(movie, stage, class_name='clip_vit_f' )
+        clip_v = self.clipmodel.encode_video(movie, stage, class_name='clip_vit' )
         mdmmt_v = self.mdmmtmodel.encode_video(movie, stage)
 
         vectors.append(clip_v.tolist()[0])
@@ -110,24 +110,24 @@ class VCOMET_PLACES:
         #print(s1_lsmdc_movies)
         return(s1_lsmdc_movies)
 
-    def update_actions(self, db, actions, movie_id, scene_element):
-        query = 'FOR doc IN s1_lsmdc_dima FILTER doc.movie_id == @movie_id AND  doc.scene_element == @scene_element UPDATE doc WITH {actions: @actions} in s1_lsmdc_dima'
-        db.aql.execute(query, bind_vars={'actions': actions, 'movie_id': movie_id, 'scene_element': scene_element})
+def update_actions(self, db, actions, movie_id, scene_element):
+    query = 'FOR doc IN s1_lsmdc_dima FILTER doc.movie_id == @movie_id AND  doc.scene_element == @scene_element UPDATE doc WITH {actions: @actions} in s1_lsmdc_dima'
+    db.aql.execute(query, bind_vars={'actions': actions, 'movie_id': movie_id, 'scene_element': scene_element})
 
-    def update_places(self, db, places, movie_id, scene_element):
-        query = 'FOR doc IN s1_lsmdc_dima FILTER doc.movie_id == @movie_id AND  doc.scene_element == @scene_element UPDATE doc WITH {places: @places} in s1_lsmdc_dima'
-        db.aql.execute(query, bind_vars={'places': places, 'movie_id': movie_id, 'scene_element': scene_element})
-    
-    def main():
-        kg = VCOMET_PLACES()
-        movies = kg.get_playground_movies()
-        for movie in movies:
-            scene_elements = kg.nre.get_stages(movie)
-            for scene_element in scene_elements:
-                places = kg.get_places_for_scene(movie, scene_element['scene_element'])
-                print(places)
-                input()
-            #kg.places_collection.insert(places)
+def update_places(self, db, places, movie_id, scene_element):
+    query = 'FOR doc IN s1_lsmdc_dima FILTER doc.movie_id == @movie_id AND  doc.scene_element == @scene_element UPDATE doc WITH {places: @places} in s1_lsmdc_dima'
+    db.aql.execute(query, bind_vars={'places': places, 'movie_id': movie_id, 'scene_element': scene_element})
+
+def main():
+    kg = VCOMET_PLACES()
+    movies = kg.get_playground_movies()
+    for movie in movies:
+        scene_elements = kg.nre.get_stages(movie)
+        for scene_element in scene_elements:
+            places = kg.get_places_for_scene(movie, scene_element['scene_element'])
+            print(places)
+            #input()
+        #kg.places_collection.insert(places)
     
 if __name__ == "__main__":
     main()
