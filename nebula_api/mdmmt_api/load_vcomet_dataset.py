@@ -379,20 +379,28 @@ class CREATE_VC_KG:
         #path = '/home/dimas/actioncliptrain00725.mp4'
         t_start = start_f//24
         t_end = stop_f//24
-        if t_start == t_end:
+        if t_start < 0:
+            print("t_start is negative! But assigning 0 to it.")
+            t_start = 0
+        if t_end < 0:
+            print("t_end is negative! But assigning 1 to it.")
+            t_end = 1
+        if t_end < 1:
+            t_end = stop_f / 24
+        if t_start == t_end and t_start >= 1:
             t_start = t_start - 1
         print("Start/stop", t_start, " ", t_end)
-        if (t_end - t_start) >= 1:
-            vemb = mdmmt.encode_video(
-                mdmmt.vggish_model,  # adio modality
-                mdmmt.vmz_model,  # video modality
-                mdmmt.clip_model,  # image modality
-                mdmmt.model_vid,  # aggregator
-                path, t_start, t_end)
-            return(vemb)
-        else:
-            print("Stage too short")
-            return(None)
+        # if (t_end - t_start) >= 1:
+        vemb = mdmmt.encode_video(
+            mdmmt.vggish_model,  # adio modality
+            mdmmt.vmz_model,  # video modality
+            mdmmt.clip_model,  # image modality
+            mdmmt.model_vid,  # aggregator
+            path, t_start, t_end)
+        return(vemb)
+        # else:
+        #     print("Stage too short")
+        #     return(None)
 
     def test_mdmmt(self):
         movie = 'Movies/114208744'

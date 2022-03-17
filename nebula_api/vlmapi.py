@@ -16,9 +16,8 @@ from nebula_api.clip_api import CLIP_API
 
 
 class VLM_API:
-    def __init__(self, model_name='mdmmt_mean', vcomet=None):
+    def __init__(self, model_name='mdmmt_mean'):
         self.available_class_names = ['clip_vit', 'clip_rn', 'mdmmt_max', 'mdmmt_mean', 'mdmmt_legacy']
-        self.vcomet = vcomet if vcomet else VCOMET_KG()
         self.model_name = model_name
         if model_name not in self.available_class_names:
             raise Exception(f"Model name invalid. Use one of these names: {self.available_class_names}")
@@ -29,8 +28,7 @@ class VLM_API:
         elif model_name == "mdmmt_max" or \
                 model_name == "mdmmt_mean" or \
                     model_name == "mdmmt_legacy":
-            # self.mdmmt_api = MDMMT_API()
-            self.mdmmt_api = self.vcomet.mdmmt
+            self.mdmmt_api = MDMMT_API()
         self.remote_api = RemoteAPIUtility()
         self.nre = NRE_API()
         print(f"Available class names: {self.available_class_names}")
@@ -78,6 +76,8 @@ class VLM_API:
             vid_embedding = self.clip_rn.clip_encode_video(fn, mid, scene_element)
         elif class_name == 'clip_vit':
             vid_embedding = self.clip_vit.clip_encode_video(fn, mid, scene_element)
+        elif class_name == 'clip_vit_f':
+            vid_embedding = self.clip_vit.clip_encode_frame(fn, mid, scene_element)
         elif class_name == 'mdmmt_max':
             vid_embedding = self.mdmmt_api.encode_video(vggish_model, vmz_model, clip_model, model_vid, path, t_start, t_end, fps, encode_type)
         elif class_name == 'mdmmt_mean':

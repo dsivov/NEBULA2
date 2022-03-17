@@ -190,6 +190,14 @@ class NRE_API:
             results.update(doc)
         return (results)
 
+    def get_stages(self, m):
+        query_r = 'FOR doc IN StoryLine FILTER doc.arango_id == "{}" RETURN doc'.format(m)
+        cursor_r = self.db.aql.execute(query_r)
+        stages = []
+        for stage in cursor_r:
+            stages.append(stage)
+        return(stages)
+        
     def download_video_file(self, movie):
         import cv2
         if os.path.exists(self.temp_file):
