@@ -10,6 +10,8 @@ import shutil
 import pickle
 from gensim.models import KeyedVectors
 from pipeline.clip_cap import ClipCap
+import csv
+import pandas as pd
 
 from nebula_api.milvus_api import connect_db
 from nebula_api.milvus_api import MilvusAPI
@@ -677,6 +679,44 @@ def fill_clip_dataset_with_lsmdc():
         pass
 
 
+def generate_clipcap_for_test_movies():
+    """
+    Go over all test movies and generate ClipCap sentence for each one of them
+    :return:
+    """
+    all_movies, all_ids = get_small_movies_ids()
+    clip_bench = NebulaVideoEvaluation()
+    low_res_clip_bench = NebulaVideoEvaluation('ViT-B/32')
+    thresholds = [0.8]
+    clip_cap = ClipCap()
+    base_folder = '/dataset/lsmdc/avi/'
+    comet = Comet("/home/migakol/data/comet/comet-atomic_2020_BART")
+    if comet.db.has_collection('nebula_clipcap_results'):
+        clipcap_db = comet.db.collection('nebula_clipcap_results')
+    else:
+        clipcap_db = comet.db.create_collection('nebula_clipcap_results')
+
+    for movie in all_movies:
+        # We are interested only in these movies
+        if movie['movie_name'] != 'Juno' and movie['movie_name'] != 'Unbreakable' and \
+                movie['movie_name'] != 'Bad_Santa' and movie['movie_name'] != 'Super_8' and \
+                movie['movie_name'] != 'The_Ugly_Truth' and movie['movie_name'] != 'This_is_40' and \
+                movie['movie_name'] != 'Harry_Potter_and_the_prisoner_of_azkaban':
+            continue
+
+        movie_name = base_folder + movie['path']
+        embedding_list, boundaries = clip_bench.create_clip_representation(movie_name, thresholds=thresholds,
+                                                                       method='single')
+        # Go over all embeddings
+        for k in range(embedding_list[0].shape[0]):
+            emb = embedding_list[0][k, :]
+
+            clip_cap_emb = low_res_clip_bench.get_leg_representaion(movie_name, boundaries[0][k], method='single')
+            clip_cap_text = clip_cap.generate_text(clip_cap_emb)
+
+            clipcap_db.insert({'lsmdc_id': movie['_key'], 'sentence': clip_cap_text, 'scene_element': k,
+                               'path': movie['path']})
+
 
 def fill_clipcap():
     all_movies, all_ids = get_small_movies_ids()
@@ -711,6 +751,66 @@ def fill_clipcap():
             # concepts, attributes, persons, triplets, verbs, all_concept, all_dicts = pickle.load(f)
 
 
+def get_clipcap_test_movies():
+    all_movies, all_ids = get_small_movies_ids()
+
+    data = []
+    for movie in all_movies:
+        # We are interested only in these movies
+        if movie['movie_name'] != 'Juno' and movie['movie_name'] != 'Unbreakable' and \
+                movie['movie_name'] != 'Bad_Santa' and movie['movie_name'] != 'Super_8' and \
+                movie['movie_name'] != 'The_Ugly_Truth' and movie['movie_name'] != 'This_is_40' and \
+                movie['movie_name'] != 'Harry_Potter_and_the_prisoner_of_azkaban':
+            continue
+        data.append([movie['path'], movie['text']])
+
+    movies_df = pd.DataFrame(data, columns=['path', 'text'])
+
+    return movies_df
+
+
+
+def create_csv_file_from_clipcap_results():
+    # pass
+    comet = Comet("/home/migakol/data/comet/comet-atomic_2020_BART")
+    # if comet.db.has_collection('nebula_clipcap_results'):
+    #     clipcap_db = comet.db.collection('nebula_clipcap_results')
+    # else:
+    #     print('Error')
+    #     return
+
+    query = 'FOR doc IN nebula_clipcap_results RETURN doc'
+    cursor = comet.db.aql.execute(query, ttl=3600)
+
+    movies_list = []
+    movie_clipcap_data = []
+    for cnt, movie_data in enumerate(cursor):
+        movies_list.append(movie_data)
+        movie_clipcap_data.append([movie_data['path'], movie_data['sentence'], movie_data['scene_element']])
+
+    full_movies_df = get_clipcap_test_movies()
+    movies_df = pd.DataFrame(movie_clipcap_data, columns=['path', 'sentence', 'scene_element'])
+    result = movies_df.merge(full_movies_df, on=['path', 'path'])
+
+    outfolder = '/home/migakol/data'
+    out_file = os.path.join(outfolder, 'clipcap_result_csv.csv')
+
+    # with open(out_file, 'w', newline='') as csvfile:
+    #     fieldnames = ['path', 'sentence', 'scene_element']
+    #     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+    #
+    #     writer.writerow({'path': 'path', 'sentence': 'sentence', 'scene_element': 'scene_element'})
+    #     for movie in movies_list:
+    #         writer.writerow({'path': movie['path'],
+    #                          'sentence': movie['sentence'],
+    #                          'scene_element': movie['scene_element']})
+
+
+
+    return movies_list
+
+
+
 if __name__ == '__main__':
 
     # text_results = 'all_text_single.pickle'
@@ -741,4 +841,8 @@ if __name__ == '__main__':
     # generate_sentences_from_lighthouse()
     # fill_clip_dataset_with_lsmdc()
 
-    fill_clipcap()
+    # fill_clipcap()
+
+    # Generate CLIP CAP and GRAPH data for all test movies
+    # generate_clipcap_for_test_movies()
+    create_csv_file_from_clipcap_results()
