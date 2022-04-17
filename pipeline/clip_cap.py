@@ -214,8 +214,11 @@ class ClipCap:
         self.prefix_length = 10
         if is_coco:
             self.model_path = '/home/ilan/git/NEBULA2-latest/NEBULA2/pipeline/weights/coco_weights.pt'
+            self.model_path = '/home/migakol/data/clip_cap/coco_weights.pt'
         else:
             self.model_path = '/home/ilan/git/NEBULA2-latest/NEBULA2/pipeline/weights/conceptual_weights.pt'
+            self.model_path = '/home/migakol/data/clip_cap/conceptual_weights.pt'
+
 
         self.model = ClipCaptionModel(self.prefix_length)
 
@@ -245,8 +248,10 @@ if __name__ == '__main__':
     clip_cap = ClipCap()
     mdfs_path = "/movies/mdfs/"
     prefix_link = "http://ec2-18-159-140-240.eu-central-1.compute.amazonaws.com:7000/static/dataset1/mdfs/"
-    images = [os.path.join(mdfs_path, image) for image in os.listdir(mdfs_path)]
+    # images = [os.path.join(mdfs_path, image) for image in os.listdir(mdfs_path)]
+    images = [' ', '']
     for img_path in images:
+        img_path = '/home/migakol/data/tiktalk08.png'
         frame = cv.imread(img_path)
         img = preprocess(Image.fromarray(frame)).unsqueeze(0).to(device)
         embedding = model.encode_image(img)

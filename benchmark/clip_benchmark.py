@@ -64,6 +64,8 @@ class NebulaVideoEvaluation:
         self.model_res = 640
         if model_name == 'ViT-B/32':
             self.model_res = 512
+        if model_name == 'ViT-L/14':
+            self.model_res = 768
         self.ind_array = []
 
 

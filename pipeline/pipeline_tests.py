@@ -20,6 +20,8 @@ from nebula_api.atomic2020.comet_enrichment_api import Comet
 
 import time
 
+# from nebula_api.vlmapi import VLM_API
+from nebula_api.nebula_enrichment_api import NRE_API
 
 class LSMDCSmallDataset:
     def __init__(self, db):
@@ -811,6 +813,115 @@ def create_csv_file_from_clipcap_results():
 
 
 
+def test_vcomet():
+    clip_bench = NebulaVideoEvaluation(model_name='ViT-L/14')
+    # nre = NRE_API()
+    video_path = '/dataset/lsmdc/avi/2041_This_is_40/2041_This_is_40_01.29.37.623-01.29.41.335.avi'
+    thresholds = [0.8]
+
+    milvus_actions = MilvusAPI(
+        'milvus', 'vcomet_vit_embedded_actions', 'nebula_visualcomet', 768)
+    milvus_places = MilvusAPI(
+        'milvus', 'vcomet_vit_embedded_place', 'nebula_visualcomet', 768)
+
+
+    base_path = '/dataset/lsmdc/avi/'
+    video_path_list = ['1004_Juno/1004_Juno_00.01.39.976-00.01.44.938.avi',
+                       '1004_Juno/1004_Juno_00.04.14.990-00.04.16.880.avi',
+                       '1004_Juno/1004_Juno_00.04.41.434-00.04.44.257.avi',
+                       '1004_Juno/1004_Juno_00.04.51.003-00.05.07.048.avi',
+                       '1004_Juno/1004_Juno_00.08.20.770-00.08.29.282.avi',
+                       '1004_Juno/1004_Juno_00.08.37.329-00.08.41.913.avi',
+                       '1004_Juno/1004_Juno_00.09.40.941-00.09.44.478.avi',
+                       '1004_Juno/1004_Juno_00.09.46.160-00.09.49.150.avi',
+                       '1004_Juno/1004_Juno_00.09.49.670-00.09.52.513.avi',
+                       '1004_Juno/1004_Juno_00.10.20.997-00.10.28.000.avi',
+                       '1004_Juno/1004_Juno_00.17.47.985-00.17.51.984.avi',
+                       '1004_Juno/1004_Juno_00.17.52.537-00.17.55.547.avi',
+                       '1004_Juno/1004_Juno_00.17.55.617-00.18.01.875.avi',
+                       '1004_Juno/1004_Juno_00.18.27.074-00.18.30.270.avi',
+                       '1004_Juno/1004_Juno_00.18.47.870-00.18.51.230.avi',
+                       '1004_Juno/1004_Juno_00.18.53.200-00.19.02.487.avi',
+                       '1004_Juno/1004_Juno_00.19.06.160-00.19.12.291.avi',
+                       '1004_Juno/1004_Juno_00.57.09.876-00.57.17.607.avi',
+                       '1004_Juno/1004_Juno_00.57.28.185-00.57.32.714.avi',
+                       '1004_Juno/1004_Juno_00.57.33.660-00.57.34.407.avi',
+                       '1004_Juno/1004_Juno_00.57.56.390-00.57.57.890.avi',
+                       '1004_Juno/1004_Juno_00.58.08.667-00.58.12.217.avi',
+                       '1004_Juno/1004_Juno_00.58.19.120-00.58.22.023.avi',
+                       '1004_Juno/1004_Juno_00.58.36.730-00.58.40.397.avi',
+                       '1004_Juno/1004_Juno_00.58.40.730-00.58.46.362.avi',
+                       '1004_Juno/1004_Juno_00.58.46.362-00.58.49.836.avi',
+                       '1004_Juno/1004_Juno_00.59.23.732-00.59.26.152.avi',
+                       '1004_Juno/1004_Juno_00.59.26.393-00.59.41.540.avi',
+                       '1012_Unbreakable/1012_Unbreakable_00.15.04.415-00.15.05.751.avi',
+                       '1012_Unbreakable/1012_Unbreakable_00.15.12.845-00.15.14.997.avi',
+                       '1012_Unbreakable/1012_Unbreakable_00.15.45.102-00.15.48.769.avi',
+                       '1012_Unbreakable/1012_Unbreakable_00.15.51.900-00.15.59.406.avi',
+                       '1012_Unbreakable/1012_Unbreakable_00.15.59.406-00.16.03.780.avi',
+                       '1012_Unbreakable/1012_Unbreakable_00.16.17.955-00.16.30.078.avi',
+                       '1012_Unbreakable/1012_Unbreakable_00.27.48.061-00.27.48.833.avi',
+                       '1012_Unbreakable/1012_Unbreakable_00.31.01.623-00.31.03.873.avi',
+                       '1012_Unbreakable/1012_Unbreakable_00.31.14.267-00.31.21.031.avi',
+                       '1012_Unbreakable/1012_Unbreakable_00.31.21.053-00.31.24.666.avi',
+                       '1012_Unbreakable/1012_Unbreakable_00.32.01.346-00.32.09.016.avi',
+                       '1012_Unbreakable/1012_Unbreakable_00.32.37.157-00.32.40.824.avi',
+                       '1012_Unbreakable/1012_Unbreakable_00.32.41.157-00.32.43.824.avi',
+                       '1012_Unbreakable/1012_Unbreakable_00.32.44.157-00.32.45.824.avi',
+                       '1012_Unbreakable/1012_Unbreakable_00.32.46.157-00.32.47.824.avi',
+                       '1012_Unbreakable/1012_Unbreakable_00.32.48.157-00.32.50.824.avi',
+                       '1012_Unbreakable/1012_Unbreakable_00.32.51.157-00.32.55.855.avi',
+                       '1017_Bad_Santa/1017_Bad_Santa_01.13.12.781-01.13.15.464.avi',
+                       '1017_Bad_Santa/1017_Bad_Santa_01.13.30.602-01.13.34.269.avi',
+                       '1017_Bad_Santa/1017_Bad_Santa_01.13.43.892-01.13.47.327.avi',
+                       '1017_Bad_Santa/1017_Bad_Santa_01.13.54.972-01.13.56.385.avi',
+                       '1017_Bad_Santa/1017_Bad_Santa_01.14.10.052-01.14.12.195.avi',
+                       '1017_Bad_Santa/1017_Bad_Santa_01.14.19.107-01.14.19.774.avi',
+                       '1017_Bad_Santa/1017_Bad_Santa_01.14.21.852-01.14.23.355.avi',
+                       '1017_Bad_Santa/1017_Bad_Santa_01.14.27.602-01.14.28.785.avi',
+                       '1017_Bad_Santa/1017_Bad_Santa_01.14.34.612-01.14.36.425.avi',
+                       '1017_Bad_Santa/1017_Bad_Santa_01.14.42.852-01.14.44.519.avi']
+
+    action_list = []
+    place_list = []
+    LEN = 50
+    for video in video_path_list:
+        video_path = base_path + video
+        embedding_list, boundaries = clip_bench.create_clip_representation(video_path, thresholds=thresholds,
+                                                                   method='single')
+        for k, emb in enumerate(embedding_list):
+            similar_nodes = milvus_actions.search_vector(LEN, emb.tolist()[0])
+            print(similar_nodes)
+            similar_place = milvus_places.search_vector(LEN, emb.tolist()[0])
+            print(similar_place)
+
+            for sim_node in similar_nodes:
+                action_list.append([video, k, sim_node[0], sim_node[1]['sentence']])
+
+            for sim_node in similar_place:
+                place_list.append([video, k, sim_node[0], sim_node[1]['sentence']])
+
+    action_df = pd.DataFrame(action_list, columns=['video', 'scene_element', 'score', 'text'])
+    place_df = pd.DataFrame(place_list, columns=['video', 'scene_element', 'score', 'text'])
+
+    action_df.to_csv(os.path.join('/home/migakol/data', 'actions_res.csv'))
+    place_df.to_csv(os.path.join('/home/migakol/data', 'place_res.csv'))
+
+def small_tests():
+    video_path = '/dataset/lsmdc/avi/1004_Juno/1004_Juno_00.04.14.990-00.04.16.880.avi'
+    thresholds = [0.8]
+    clip_bench = NebulaVideoEvaluation(model_name='ViT-L/14')
+    embedding_list, boundaries = clip_bench.create_clip_representation(video_path, thresholds=thresholds,
+                                                                   method='single')
+    low_res_clip_bench = NebulaVideoEvaluation('ViT-B/32')
+    clip_cap = ClipCap()
+    # from gensim.scripts.glove2word2ve
+
+    for k in range(len(boundaries[0])):
+        clip_cap_emb = low_res_clip_bench.get_leg_representaion(video_path, boundaries[0][k], method='single')
+        clip_cap_text = clip_cap.generate_text(clip_cap_emb, use_beam_search=True)
+        pass
+
 if __name__ == '__main__':
 
     # text_results = 'all_text_single.pickle'
@@ -845,4 +956,6 @@ if __name__ == '__main__':
 
     # Generate CLIP CAP and GRAPH data for all test movies
     # generate_clipcap_for_test_movies()
-    create_csv_file_from_clipcap_results()
+    # create_csv_file_from_clipcap_results()
+    # test_vcomet()
+    small_tests()
