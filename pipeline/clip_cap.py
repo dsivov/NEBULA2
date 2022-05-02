@@ -153,6 +153,78 @@ def generate2(
 
     return generated_list[0]
 
+def generate_with_previous(
+        model,
+        tokenizer,
+        tokens=None,
+        prompt=None,
+        embed=None,
+        entry_count=1,
+        entry_length=67,  # maximum number of words
+        top_p=0.8,
+        temperature=1.,
+        stop_token: str = '.',
+        prev_sent = ''
+):
+    model.eval()
+    generated_num = 0
+    generated_list = []
+    stop_token_index = tokenizer.encode(stop_token)[0]
+    filter_value = -float("Inf")
+    device = next(model.parameters()).device
+
+    good_tokens = [13, 32, 64, 257, 262, 286, 287, 319, 340, 351, 379, 464, 818, 1290, 1474, 2029, 2157, 2166, 2174,
+                   2202, 2953, 21106, 21428, 32397, 34163, 40640]
+
+    prev_tokens = tokenizer.encode(prev_sent)
+    prev_tokens = list(set(prev_tokens) - set(good_tokens))
+
+    with torch.no_grad():
+
+        for entry_idx in range(entry_count):
+            if embed is not None:
+                generated = embed
+            else:
+                if tokens is None:
+                    tokens = torch.tensor(tokenizer.encode(prompt))
+                    tokens = tokens.unsqueeze(0).to(device)
+
+                generated = model.gpt.transformer.wte(tokens)
+
+            for i in range(entry_length):
+
+                outputs = model.gpt(inputs_embeds=generated)
+                logits = outputs.logits
+                # logits = logits / (temperature if temperature > 0 else 1.0)
+                logits = logits[:, -1, :] / (temperature if temperature > 0 else 1.0)
+                logits[0, prev_tokens] = -np.inf
+                sorted_logits, sorted_indices = torch.sort(logits, descending=True)
+                cumulative_probs = torch.cumsum(nnf.softmax(sorted_logits, dim=-1), dim=-1)
+                sorted_indices_to_remove = cumulative_probs > top_p
+                sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[
+                                                    ..., :-1
+                                                    ].clone()
+                sorted_indices_to_remove[..., 0] = 0
+
+                indices_to_remove = sorted_indices[sorted_indices_to_remove]
+                logits[:, indices_to_remove] = filter_value
+                next_token = torch.argmax(logits, -1).unsqueeze(0)
+                # pp = torch.argsort(logits, -1).unsqueeze(0)
+                next_token_embed = model.gpt.transformer.wte(next_token)
+                if tokens is None:
+                    tokens = next_token
+                else:
+                    tokens = torch.cat((tokens, next_token), dim=1)
+                generated = torch.cat((generated, next_token_embed), dim=1)
+                if stop_token_index == next_token.item():
+                    break
+
+            output_list = list(tokens.squeeze().cpu().numpy())
+            output_text = tokenizer.decode(output_list)
+            generated_list.append(output_text)
+
+    return generated_list[0]
+
 class MLP(nn.Module):
 
     def forward(self, x: T) -> T:
@@ -227,7 +299,7 @@ class ClipCap:
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else 'cpu')
         self.model = self.model.to(self.device)
 
-    def generate_text(self, emb, use_beam_search=False):
+    def generate_text(self, emb, use_beam_search=False, num_versions=0):
         """
         :param emb: - clip embedding
         :return:
@@ -235,14 +307,60 @@ class ClipCap:
         prefix_embed = self.model.clip_project(torch.tensor(emb, dtype=torch.float32)).reshape(1, self.prefix_length,-1)
          
         if use_beam_search:
-            generated_text_prefix = generate_beam(self.model, self.tokenizer, embed=prefix_embed, beam_size=5)
+            # generated_text_prefix = generate_beam(self.model, self.tokenizer, embed=prefix_embed, beam_size=5)
+            generated_text_prefix = generate_beam(self.model, self.tokenizer, embed=prefix_embed, beam_size=50)
         else:                                                                                       
             generated_text_prefix = generate2(self.model, self.tokenizer, embed=prefix_embed)
+            old_text = generated_text_prefix
+            if num_versions > 0:
+                ret_text = [''] * num_versions
+                ret_text[0] = generated_text_prefix
+            for k in range(num_versions-1):
+                new_text = generate_with_previous(self.model, self.tokenizer, embed=prefix_embed,
+                                              prev_sent=old_text)
+                ret_text[k+1] = new_text
+                old_text = old_text + ' ' + new_text
+            if num_versions > 0:
+                generated_text_prefix = ret_text
+
         return generated_text_prefix
 
 
+from nebula_api.atomic2020.comet_enrichment_api import Comet
+import csv
+def get_clipcap_examples():
+    comet = Comet("/home/migakol/data/comet/comet-atomic_2020_BART")
+
+    query = 'FOR doc IN nebula_clipcap_results RETURN doc'
+    cursor = comet.db.aql.execute(query, ttl=3600)
+
+    movies_list = []
+    for cnt, movie_data in enumerate(cursor):
+        movies_list.append(movie_data)
+
+    outfolder = '/home/migakol/data'
+    out_file = os.path.join(outfolder, 'clipcap_result_csv2.csv')
+
+    with open(out_file, 'w', newline='') as csvfile:
+        fieldnames = ['path', 'sentence0', 'sentence1', 'sentence2', 'scene_element']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+        writer.writerow({'path': 'path', 'sentence0': 'sentence0', 'sentence1': 'sentence1',
+                         'sentence2': 'sentence2', 'scene_element': 'scene_element'})
+        for movie in movies_list:
+            writer.writerow({'path': movie['path'],
+                             'sentence0': movie['sentence0'],
+                             'sentence1': movie['sentence1'],
+                             'sentence2': movie['sentence2'],
+                             'scene_element': movie['scene_element']})
+
+    return movies_list
+
+
 if __name__ == '__main__':
-    
+
+    get_clipcap_examples()
+
     device = torch.device("cuda:0" if torch.cuda.is_available() else 'cpu')
     model, preprocess = clip.load("ViT-B/32", device=device)
     clip_cap = ClipCap()

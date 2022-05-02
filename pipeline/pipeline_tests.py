@@ -689,6 +689,7 @@ def generate_clipcap_for_test_movies():
     all_movies, all_ids = get_small_movies_ids()
     clip_bench = NebulaVideoEvaluation()
     low_res_clip_bench = NebulaVideoEvaluation('ViT-B/32')
+    # low_res_clip_bench = NebulaVideoEvaluation()
     thresholds = [0.8]
     clip_cap = ClipCap()
     base_folder = '/dataset/lsmdc/avi/'
@@ -698,12 +699,17 @@ def generate_clipcap_for_test_movies():
     else:
         clipcap_db = comet.db.create_collection('nebula_clipcap_results')
 
-    for movie in all_movies:
+    # comet.db.delete_collection('nebula_clipcap_results')
+
+    for movie_cnt, movie in enumerate(all_movies):
         # We are interested only in these movies
         if movie['movie_name'] != 'Juno' and movie['movie_name'] != 'Unbreakable' and \
                 movie['movie_name'] != 'Bad_Santa' and movie['movie_name'] != 'Super_8' and \
                 movie['movie_name'] != 'The_Ugly_Truth' and movie['movie_name'] != 'This_is_40' and \
                 movie['movie_name'] != 'Harry_Potter_and_the_prisoner_of_azkaban':
+            continue
+
+        if movie['movie_name'] == 'Juno':
             continue
 
         movie_name = base_folder + movie['path']
@@ -714,10 +720,15 @@ def generate_clipcap_for_test_movies():
             emb = embedding_list[0][k, :]
 
             clip_cap_emb = low_res_clip_bench.get_leg_representaion(movie_name, boundaries[0][k], method='single')
-            clip_cap_text = clip_cap.generate_text(clip_cap_emb)
+            clip_cap_text = clip_cap.generate_text(clip_cap_emb, use_beam_search=False, num_versions=3)
+            # clip_cap_text = clip_cap.generate_text(clip_cap_emb, use_beam_search=False)
 
-            clipcap_db.insert({'lsmdc_id': movie['_key'], 'sentence': clip_cap_text, 'scene_element': k,
+            clipcap_db.insert({'lsmdc_id': movie['_key'], 'sentence0': clip_cap_text[0],
+                               'sentence1': clip_cap_text[1], 'sentence2': clip_cap_text[2], 'scene_element': k,
                                'path': movie['path']})
+
+        with open('/home/migakol/data/count.txt', 'w') as f:
+            f.write(str(movie_cnt) + ' from ' + str(len(all_movies)))
 
 
 def fill_clipcap():
@@ -955,7 +966,7 @@ if __name__ == '__main__':
     # fill_clipcap()
 
     # Generate CLIP CAP and GRAPH data for all test movies
-    # generate_clipcap_for_test_movies()
+    generate_clipcap_for_test_movies()
     # create_csv_file_from_clipcap_results()
     # test_vcomet()
-    small_tests()
+    # small_tests()
