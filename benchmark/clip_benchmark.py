@@ -68,6 +68,44 @@ class NebulaVideoEvaluation:
             self.model_res = 768
         self.ind_array = []
 
+    def is_sharp(self, color_img, blur_threshold):
+        """
+        :param color_img: OpenCV,  format
+        :param blur_threshold:
+        :return: 1 if sharp
+        """
+        gray = cv.cvtColor(color_img, cv.COLOR_BGR2GRAY)
+        dst = cv.GaussianBlur(gray, (3, 3), cv.BORDER_DEFAULT)
+        fm = cv.Laplacian(dst, cv.CV_64F).var()
+        if fm > blur_threshold:
+            return 1
+        else:
+            return 0
+
+    def get_adaptive_movie_threshold(self, movie_name, start_frame, end_frame):
+        """
+        :param movie_name: - path of the movie
+        :param start_frame: we ignore frames before start (not including)
+        :param end_frame: we ignore frames after end
+        :return:
+        """
+        cap = cv.VideoCapture(movie_name)
+        ret, frame = cap.read()
+        frame_num = 0
+        ret_list = []
+        values = []
+        while cap.isOpened() and ret:
+            if frame_num >= start_frame and frame_num <= end_frame:
+                gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+                dst = cv.GaussianBlur(gray, (3, 3), cv.BORDER_DEFAULT)
+                fm = cv.Laplacian(dst, cv.CV_64F).var()
+                values.append(fm)
+            frame_num = frame_num + 1
+            ret, frame = cap.read()
+
+        blur_threshold = np.median(values) / 1.25
+        return blur_threshold, values
+
 
     def mark_blurred_frames(self, movie_name, start_frame, end_frame, blur_threshold=100):
         """
@@ -77,43 +115,32 @@ class NebulaVideoEvaluation:
         :return: return the list of 1s and 0s and from start_frame (including) until end_frame (including)
         0 == BAD
         """
-        cap = cv.VideoCapture(movie_name)
-        ret, frame = cap.read()
-        frame_num = 0
-        ret_list = []
-        values = []
-        while cap.isOpened() and ret:
-            if frame_num >= start_frame and frame_num <= end_frame:
-                gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-                dst = cv.GaussianBlur(gray, (3, 3), cv.BORDER_DEFAULT)
-                fm = cv.Laplacian(dst, cv.CV_64F).var()
-                values.append(fm)
-                if fm > blur_threshold:
-                    ret_list.append(1)
-                else:
-                    ret_list.append(0)
-            frame_num = frame_num + 1
-            ret, frame = cap.read()
+        blur_threshold, values = self.get_adaptive_movie_threshold(movie_name, start_frame, end_frame)
 
-        blur_threshold = np.median(values) / 1.25
-
-        cap = cv.VideoCapture(movie_name)
-        ret, frame = cap.read()
-        frame_num = 0
         ret_list = []
-        values = []
-        while cap.isOpened() and ret:
-            if frame_num >= start_frame and frame_num <= end_frame:
-                gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-                dst = cv.GaussianBlur(gray, (3, 3), cv.BORDER_DEFAULT)
-                fm = cv.Laplacian(dst, cv.CV_64F).var()
-                values.append(fm)
-                if fm > blur_threshold:
-                    ret_list.append(1)
-                else:
-                    ret_list.append(0)
-            frame_num = frame_num + 1
-            ret, frame = cap.read()
+        for val in values:
+            if val < blur_threshold:
+                ret_list.append(1)
+            else:
+                ret_list.append(0)
+
+        # cap = cv.VideoCapture(movie_name)
+        # ret, frame = cap.read()
+        # frame_num = 0
+        # ret_list = []
+        # values = []
+        # while cap.isOpened() and ret:
+        #     if frame_num >= start_frame and frame_num <= end_frame:
+        #         gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+        #         dst = cv.GaussianBlur(gray, (3, 3), cv.BORDER_DEFAULT)
+        #         fm = cv.Laplacian(dst, cv.CV_64F).var()
+        #         values.append(fm)
+        #         if fm > blur_threshold:
+        #             ret_list.append(1)
+        #         else:
+        #             ret_list.append(0)
+        #     frame_num = frame_num + 1
+        #     ret, frame = cap.read()
 
         return np.array(ret_list)
 
